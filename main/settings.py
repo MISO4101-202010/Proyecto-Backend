@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
-    'rest_framework.authtoken',    
+    'rest_framework.authtoken',
     'activities',
     'interactive_content',
     'users',
@@ -82,7 +82,16 @@ WSGI_APPLICATION = 'main.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-DATABASES = {'default': dj_database_url.config()}
+HEROKU_APPLICATION = os.environ.get('HEROKU_APPLICATION')
+DATABASES = {'default': {}}
+if HEROKU_APPLICATION:
+    DATABASES['default'].update(dj_database_url.config(conn_max_age=500))
+
+else:
+    DATABASES['default'].update({
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    })
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
