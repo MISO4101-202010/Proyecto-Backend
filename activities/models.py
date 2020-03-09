@@ -20,6 +20,7 @@ class Actividad(models.Model):
     marca = models.ForeignKey(Marca, on_delete=models.CASCADE)
     retroalimentacion = models.CharField(max_length=200, null=True, blank=True)
     tipoActividad = models.IntegerField(blank=False, default=0)
+    puedeSaltar = models.BooleanField(default=False)
 
     def __str__(self):
         return self.nombre
