@@ -144,24 +144,17 @@ class CreatePreguntaSeleccionMultiple(APIView):
         return Response(data=PreguntaOpcionMultipleSerializer(question).data)
 
 
-class PreguntaFoVView(APIView):
-    #authentication_classes = (TokenAuthentication, )
-
-    # def get_permissions(self):
-    #    if self.request.method == 'GET':
-    #        return (IsAuthenticated(),)
-    #    else:
-    #        return (IsProfesor(),)
+class PreguntaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
+    serializer_class = PreguntaFoVSerializer
 
     def get(self, request, *args, **kwargs):
-        marca = self.kwargs.get('marca', None)
-        questions = PreguntaFoV.objects.filter(marca=marca)
+        questions = PreguntaFoV.objects.all()
         serializer = PreguntaFoVSerializer(questions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         question_data = request.data
-        marca_id = question_data.get('marca_id', None)
+        marca_id = question_data.get('marca', None)
         if not marca_id:
             interactive_content = ContenidoInteractivo.objects.get(
                 id=question_data['marca'].pop('contenido_id'))
@@ -169,11 +162,21 @@ class PreguntaFoVView(APIView):
                 contenido=interactive_content, **question_data.pop('marca'))
         else:
             marca = Marca.objects.get(pk=marca_id)
-
-        question = PreguntaFoV.objects.create(
-            marca=marca, tipoActividad=2, **question_data)
-
+        question_data.pop('marca')
+        question = PreguntaFoV.objects.create(marca=marca, **question_data)
         return Response(PreguntaFoVSerializer(question).data, status=status.HTTP_201_CREATED)
+
+
+class PreguntaFoVGetOne(ListModelMixin, CreateModelMixin, GenericAPIView):
+    serializer_class = PreguntaFoVSerializer
+
+    def get(self, request, *args, **kwargs):
+        marca = self.kwargs.get('marca', None)
+        questions = PreguntaFoV.objects.filter(marca=marca)
+        if questions.count() > 1:
+            return Response('Múltiples resultados para la marca ' + str(marca), status=status.HTTP_404_NOT_FOUND)
+        serializer = PreguntaFoVSerializer(questions.get())
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class GetPausesView(APIView):

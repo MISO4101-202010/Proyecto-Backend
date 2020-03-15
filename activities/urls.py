@@ -1,8 +1,9 @@
 from django.urls import path
-from activities.views import CalificarAPI, MarcaApi, intentos_max, PreguntaFoVView, GetPausesView, GetPreguntaAbierta, \
+
+from activities.views import CalificarAPI, MarcaApi, intentos_max, GetPausesView, GetPreguntaAbierta, \
     MarcaView, reports, RespuestaSeleccionMultipleView, CreatePreguntaSeleccionMultiple, PausaDetail, \
     CreatePreguntaAbierta, DetailPreguntaSeleccionMultiple, \
-    tipo_actividad, RespuestaAbiertaMultipleView, RespuestaFoVMultipleView
+    tipo_actividad, RespuestaAbiertaMultipleView, RespuestaFoVMultipleView, PreguntaFoVGetOne, PreguntaFoVView
 
 app_name = 'activities'
 # add url path to the API
@@ -21,9 +22,8 @@ urlpatterns = [
     path('generate-open-question', CreatePreguntaAbierta.as_view(), name='pregunta abierta '),
     path('marca', MarcaApi.as_view(), name='marca'),
     path('ultimo_intento', intentos_max),
-    path('pregunta_f_v/<int:marca>/',
-         PreguntaFoVView.as_view(), name='preguntasFoV'),
-    path('pregunta_f_v/create', PreguntaFoVView.as_view(), name='preguntasFoV'),
+    path('pregunta_f_v/<int:marca>', PreguntaFoVGetOne.as_view(), name='preguntasFoV'),
+    path('pregunta_f_v', PreguntaFoVView.as_view(), name='preguntasFoV'),
     path('pausas/<int:marca>/', GetPausesView.as_view(), name="get pauses"),
     path('pregunta_abierta', GetPreguntaAbierta.as_view(), name="pregunta abierta"),
     path('pregunta_abierta/<int:marca>/', GetPreguntaAbierta.as_view(), name="pregunta abierta"),
