@@ -192,6 +192,18 @@ class GetPreguntaAbierta(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class DetailPreguntaAbierta(generics.RetrieveUpdateDestroyAPIView, ListModelMixin):
+    serializer_class = PreguntaAbiertaSerializer
+    lookup_url_kwarg = "marca"
+
+    def get_queryset(self):
+        marca = self.kwargs.get(self.lookup_url_kwarg)
+        return PreguntaAbierta.objects.filter(marca=marca)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, *kwargs)
+
+
 class DetailPreguntaSeleccionMultiple(generics.RetrieveUpdateDestroyAPIView, ListModelMixin):
     serializer_class = PreguntaOpcionMultipleSerializer
     lookup_url_kwarg = "marca"
@@ -325,9 +337,9 @@ def retrieve_max_intentos(tipo, user, pregunta):
     if tipo == 3:
         respuestas = RespuestaAbiertaEstudiante.objects.filter(
             estudiante=user).filter(preguntaAbierta=pregunta)
-        
+
         return consolida_resps(respuestas)
-        
+
 
 def consolida_resps(respuestas):
     resps = []
@@ -378,7 +390,7 @@ def tipo_actividad(request):
         return JsonResponse({'tipo_actividad': activity[0].tipoActividad})
 
 
-class RespuestaAbiertaMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView):
+class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
     queryset = RespuestaAbiertaEstudiante.objects.all()
     # clase serializer para la transformacion de datos del request
     serializer_class = RespuestaAbiertaSerializer
@@ -393,11 +405,13 @@ class RespuestaAbiertaMultipleView(ListModelMixin, CreateModelMixin, GenericAPIV
         return self.create(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-         # Validacion de respuesta en blanco (null)
+        print('create')
+        # Validacion de respuesta en blanco (null)
         if self.request.data['preguntaAbierta']:
             pregunta1 = PreguntaAbierta.objects.filter(
                 id=self.request.data['preguntaAbierta']
             )
+            print('xxxx', pregunta1)
             pregunta = pregunta1[0]
 
            # pregunta = pregunta1[0].preguntaSeleccionMultiple
@@ -412,6 +426,7 @@ class RespuestaAbiertaMultipleView(ListModelMixin, CreateModelMixin, GenericAPIV
                 msj = {'max_attemps': 'Número de intentos maximos excedido'}
                 return Response(msj, status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
+            print('no pasa')
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)

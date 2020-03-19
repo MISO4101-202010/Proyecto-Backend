@@ -1,8 +1,8 @@
 from django.urls import path
 from activities.views import CalificarAPI, MarcaApi, intentos_max, PreguntaFoVView, GetPausesView, GetPreguntaAbierta, \
     MarcaView, reports, RespuestaSeleccionMultipleView, CreatePreguntaSeleccionMultiple, PausaDetail, \
-    CreatePreguntaAbierta, DetailPreguntaSeleccionMultiple, \
-    tipo_actividad, RespuestaAbiertaMultipleView, RespuestaFoVMultipleView
+    CreatePreguntaAbierta, DetailPreguntaSeleccionMultiple, DetailPreguntaAbierta, \
+    tipo_actividad, RespuestaAbiertaView, RespuestaFoVMultipleView
 
 app_name = 'activities'
 # add url path to the API
@@ -11,10 +11,11 @@ urlpatterns = [
     path('marca', MarcaView.as_view(), name='marca'),
     path('reports/<int:contentpk>', reports, name='reports'),
     path('respuestaOpcionMultiple/', RespuestaSeleccionMultipleView.as_view()),
-    path('respuestaAbierta/', RespuestaAbiertaMultipleView.as_view()),
+    path('respuestaAbierta/', RespuestaAbiertaView.as_view()),
     path('respuestafov/', RespuestaFoVMultipleView.as_view()),
-    path('preguntaOpcionMultiple/<int:marca>/',
-         DetailPreguntaSeleccionMultiple.as_view()),
+    path('preguntaOpcionMultiple/<int:marca>/', DetailPreguntaSeleccionMultiple.as_view()),
+    path('preguntaAbierta/<int:marca>/', DetailPreguntaAbierta.as_view()),
+
     path('calificacion', CalificarAPI.as_view(), name='calificacion'),
     path('generate-question-multiple-choice', CreatePreguntaSeleccionMultiple.as_view(),
          name='pregunta seleccion multiple '),
@@ -29,4 +30,6 @@ urlpatterns = [
     path('pregunta_abierta/<int:marca>/', GetPreguntaAbierta.as_view(), name="pregunta abierta"),
     path('create-pausa/', PausaDetail.as_view(), name="create pauses"),
     path('tipo_actividad', tipo_actividad),
+    #  estudiante
+    #     path('estudiante/pregunta_abierta', PreguntaAbierta.as_view(), name="estudiante_pregunta abierta"),
 ]
