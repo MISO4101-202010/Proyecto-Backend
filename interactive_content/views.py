@@ -65,6 +65,7 @@ def set_contents(resources, user_id):
     ci.curso.add(*objetos)
     return JsonResponse({'status': 'success'})
 
+
 # Retorna la lista de cursos con su contenido interactivo para cada estudiante
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
@@ -78,11 +79,12 @@ def get_student_courses_and_interactive_content(request):
         grupos = Grupo.objects.filter(estudiante=user)
 
         for grupo in grupos:
-            data.append({"grupo":grupo.id,"curso":grupo.curso.id,"nombre":grupo.curso.nombre,"contenido_interactivo":[]})
+            data.append(
+                {"grupo": grupo.id, "curso": grupo.curso.id, "nombre": grupo.curso.nombre, "contenido_interactivo": []})
             for element in ContenidoInteractivo.objects.filter(curso=grupo.curso):
                 data[-1]['contenido_interactivo'].append(ContenidoInteractivoFieldsSerializer(element).data)
-
         return JsonResponse(data, safe=False)
+
 
 # Verificar que solo sea un usuario profesor el que acceda a este endpoint
 # Remove this authentication_classes. Only for testing
