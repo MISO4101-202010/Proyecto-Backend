@@ -15,5 +15,6 @@ urlpatterns = [
     path('mycourses', views.get_student_courses_and_interactive_content, name='get_student_courses_and_interactive_content'),
     url(r'^courses/(?P<content_id>\d+)/$', views.courses_content_view, name='courses'),
     url(r'^interactivecontent/(?P<pk>[0-9]+)$', views.ContenidoInteractivoDetail.as_view(), name='interactive_content'),
-    path('courses/details/', GetCourseView.as_view(), name="info courses")
+    path('courses/details/', GetCourseView.as_view(), name="info courses"),
+    path('coursetest/<int:course_id>/', views.coursetest_content_view)
 ]

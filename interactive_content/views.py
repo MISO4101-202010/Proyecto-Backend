@@ -136,6 +136,36 @@ def courses_content_view(request, content_id):
         return response
 
 
+# Verificar que solo sea un usuario profesor el que acceda a este endpoint
+# Remove this authentication_classes. Only for testing
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def coursetest_content_view(request, course_id):
+    # Tomando información del usuario
+    user_id = request.user.id
+    # Verificar que el docente tenga contenido creado
+    try:
+        # Recuperar el contenido que creó el profesor
+        user = request.user
+        user_with_roll = user.get_real_instance()
+        if user_with_roll.__class__.__name__ == 'Profesor':
+            contents_list = ContenidoInteractivo.objects.filter(curso__profesor=user_id, curso=course_id)
+
+    except (KeyError, Curso.DoesNotExist):
+        # devolver vacio si no existe contenido creado por el usuario
+        return JsonResponse({})
+    else:
+        # Devolver los resultados de la consulta en formato JSON
+        if not contents_list:
+            return JsonResponse({})
+        serializer_class = ContenidoInteractivoSerializer(contents_list, many=True)
+        response = Response(serializer_class.data, status=status.HTTP_200_OK)
+        response.accepted_renderer = JSONRenderer()
+        response.accepted_media_type = "application/json"
+        response.renderer_context = {}
+        return response
+
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
