@@ -141,7 +141,7 @@ def courses_content_view(request, content_id):
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def coursetest_content_view(request, course_id):
+def interactive_content_by_course(request, course_id):
     # Tomando información del usuario
     user_id = request.user.id
     # Verificar que el docente tenga contenido creado
