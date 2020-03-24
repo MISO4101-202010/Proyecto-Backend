@@ -35,6 +35,8 @@ class ContenidoInteractivoSerializer(serializers.ModelSerializer):
 
 
 class ContenidoInteractivoFieldsSerializer(serializers.ModelSerializer):
+    contenido = ContenidoSerializer(read_only=True)
+
     class Meta:
         model = ContenidoInteractivo
         fields = '__all__'
