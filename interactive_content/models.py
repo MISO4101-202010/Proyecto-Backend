@@ -30,6 +30,7 @@ class ContenidoInteractivo(models.Model):
     tiempo_disponibilidad = models.DateTimeField(null=True, blank=True)
     tiene_retroalimentacion = models.BooleanField(null=True, blank=True)
     curso = models.ManyToManyField(Curso)
+    puedeSaltar = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'contenido interactivo'
