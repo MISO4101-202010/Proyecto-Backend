@@ -1,3 +1,5 @@
+from itertools import count
+
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -11,8 +13,8 @@ from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404
 
 from interactive_content.permissions import IsProfesor
-from users.models import Profesor
-from interactive_content.models import ContenidoInteractivo
+from users.models import Profesor, Estudiante
+from interactive_content.models import ContenidoInteractivo, Curso, Grupo
 
 from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
     RespuestaSeleccionMultipleSerializer, MarcaSerializer, \
@@ -474,3 +476,60 @@ class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView)
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
+    serializer_class = RespuestaFoVSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, *kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        '''Validar si la información necesaria viene'''
+        if self.request.data['preguntaVoF'] and self.request.data['estudiante'] and self.request.data['esVerdadero']:
+            # Validar extraer los datos del request
+            preguntaVoF_id = self.request.data['preguntaVoF']
+            estudiante_id = self.request.data['estudiante']
+            respuesta_actual = self.request.data['esVerdadero']
+            try:
+                respuesta_previa = RespuestaVoF.objects.filter(preguntaVoF=preguntaVoF_id,
+                                                               estudiante_id=estudiante_id).latest('id')
+            except:
+                respuesta_previa = None
+
+            if respuesta_previa is not None:
+                if respuesta_previa.preguntaVoF.numeroDeIntentos > respuesta_previa.intento:
+                    nueva_respuesta = RespuestaVoF()
+                    nueva_respuesta.preguntaVoF = respuesta_previa.preguntaVoF
+                    nueva_respuesta.intento = respuesta_previa.intento + 1
+                    nueva_respuesta.grupo = respuesta_previa.grupo
+                    nueva_respuesta.estudiante = respuesta_previa.estudiante
+                    nueva_respuesta.esVerdadero = respuesta_actual
+                    nueva_respuesta.save()
+                    return Response(self.serializer_class(nueva_respuesta).data, status=status.HTTP_200_OK)
+                else:
+                    return Response(data={"Máximo número de intentos alcanzado"}, status=status.HTTP_400_BAD_REQUEST)
+
+            else:
+                # obtener pregunta
+                pregunta = PreguntaFoV.objects.filter(pk=preguntaVoF_id).get()
+                # obtenerEstudiante
+                estudianteObj = Estudiante.objects.filter(pk=estudiante_id).get()
+                # obtener curso segun la pregunta
+                curso = Curso.objects.filter(contenidointeractivo=pregunta.marca.contenido_id).get()
+                # Obtener grupo
+                grupo = Grupo.objects.filter(curso=curso.id, estudiante=estudiante_id).get()
+                # Crear respuesta
+                respuestaFoV = RespuestaVoF()
+                respuestaFoV.estudiante = estudianteObj
+                respuestaFoV.esVerdadero = respuesta_actual
+                respuestaFoV.intento = 1
+                respuestaFoV.grupo = grupo
+                respuestaFoV.preguntaVoF = pregunta
+                respuestaFoV.save()
+                return Response(self.serializer_class(respuestaFoV).data, status=status.HTTP_200_OK)
+        else:
+            return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
