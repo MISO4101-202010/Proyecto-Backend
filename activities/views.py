@@ -17,7 +17,7 @@ from interactive_content.models import ContenidoInteractivo
 from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
     RespuestaSeleccionMultipleSerializer, MarcaSerializer, \
     PreguntaFoVSerializer, PausaSerializer, PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, \
-    RespuestaFoVSerializer
+    RespuestaFoVSerializer, MarcaConTipoActividadSerializer
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, \
     Opcionmultiple, PreguntaOpcionMultiple, PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, \
     RespuestaAbiertaEstudiante
@@ -289,11 +289,23 @@ class CalificarAPI(ListCreateAPIView):
 
 
 class MarcaApi(ListModelMixin, GenericAPIView):
-    serializer_class = MarcaSerializer
+
+    def get_serializer_class(self):
+        contenido = self.request.query_params.get('contenido', None)
+        if contenido is not None:
+            return MarcaConTipoActividadSerializer
+        return MarcaSerializer
 
     def get_queryset(self):
         content = self.request.query_params.get('contenido', None)
-        return Marca.objects.filter(contenido=content)
+        marca = self.request.query_params.get('marca', None)
+        if content is not None:
+            response = Actividad.objects.filter(marca__contenido=content).select_related('marca')
+            return response
+        elif marca is not None:
+            return Marca.objects.filter(pk=marca)
+        else:
+            return Marca.objects.all()
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
