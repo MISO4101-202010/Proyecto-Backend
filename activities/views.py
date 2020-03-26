@@ -409,7 +409,6 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
         return self.create(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-        print('create')
         # Validacion de respuesta en blanco (null)
         if self.request.data['preguntaAbierta']:
             pregunta1 = PreguntaAbierta.objects.filter(

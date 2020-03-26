@@ -30,6 +30,4 @@ urlpatterns = [
     path('pregunta_abierta/<int:marca>/', GetPreguntaAbierta.as_view(), name="pregunta abierta"),
     path('create-pausa/', PausaDetail.as_view(), name="create pauses"),
     path('tipo_actividad', tipo_actividad),
-    #  estudiante
-    #     path('estudiante/pregunta_abierta', PreguntaAbierta.as_view(), name="estudiante_pregunta abierta"),
 ]
