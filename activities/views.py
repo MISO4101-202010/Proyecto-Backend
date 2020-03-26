@@ -176,16 +176,12 @@ class PreguntaFoVView(APIView):
         return Response(PreguntaFoVSerializer(question).data, status=status.HTTP_201_CREATED)
 
 
-class GetPausesView(generics.RetrieveUpdateDestroyAPIView, ListModelMixin):
-    serializer_class = PausaSerializer
-    lookup_url_kwarg = "marca"
-
-    def get_queryset(self):
-        marca = self.kwargs.get(self.lookup_url_kwarg)
-        return Pausa.objects.filter(marca=marca)
-
+class GetPausesView(APIView):
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, *kwargs)
+        marca = self.kwargs.get('marca', None)
+        pauses = Pausa.objects.filter(marca=marca)
+        serializer = PausaSerializer(pauses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class GetPreguntaAbierta(APIView):
