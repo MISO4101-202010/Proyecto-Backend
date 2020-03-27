@@ -489,11 +489,11 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
     def create(self, request, *args, **kwargs):
         '''Validar si la información necesaria viene'''
-        if self.request.data['preguntaVoF'] and self.request.data['estudiante'] and self.request.data['esVerdadero']:
-            # Validar extraer los datos del request
-            preguntaVoF_id = self.request.data['preguntaVoF']
-            estudiante_id = self.request.data['estudiante']
-            respuesta_actual = self.request.data['esVerdadero']
+        # Validar extraer los datos del request
+        preguntaVoF_id = self.request.data['preguntaVoF']
+        estudiante_id = self.request.data['estudiante']
+        respuesta_actual = self.request.data['esVerdadero']
+        if preguntaVoF_id is not None and estudiante_id is not None and respuesta_actual is not None:
             try:
                 respuesta_previa = RespuestaVoF.objects.filter(preguntaVoF=preguntaVoF_id,
                                                                estudiante_id=estudiante_id).latest('id')
