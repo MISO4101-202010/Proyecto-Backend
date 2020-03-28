@@ -83,16 +83,17 @@ WSGI_APPLICATION = 'main.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 HEROKU_APPLICATION = os.environ.get('HEROKU_APPLICATION')
-DATABASES = {'default': {}}
-if HEROKU_APPLICATION:
-    DATABASES['default'].update(dj_database_url.config(conn_max_age=500))
-
-else:
-    DATABASES['default'].update({
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    })
-
+DATABASES = {
+    'default': {
+        'ENGINE':
+            'django.db.backends.postgresql_psycopg2',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
@@ -140,9 +141,9 @@ STATICFILES_DIRS = (
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # heroku workaround (codeship)
-if '/app' in os.environ['HOME']:
-    import django_heroku
-    django_heroku.settings(locals())
+# if '/app' in os.environ['HOME']:
+#     import django_heroku
+#     django_heroku.settings(locals())
 
 # sslmode issue workaround (local development)
 # import django_heroku
