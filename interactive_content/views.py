@@ -65,6 +65,7 @@ def set_contents(resources, user_id):
     ci.curso.add(*objetos)
     return JsonResponse({'status': 'success'})
 
+
 # Retorna la lista de cursos con su contenido interactivo para cada estudiante
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
@@ -78,11 +79,12 @@ def get_student_courses_and_interactive_content(request):
         grupos = Grupo.objects.filter(estudiante=user)
 
         for grupo in grupos:
-            data.append({"grupo":grupo.id,"curso":grupo.curso.id,"nombre":grupo.curso.nombre,"contenido_interactivo":[]})
+            data.append(
+                {"grupo": grupo.id, "curso": grupo.curso.id, "nombre": grupo.curso.nombre, "contenido_interactivo": []})
             for element in ContenidoInteractivo.objects.filter(curso=grupo.curso):
                 data[-1]['contenido_interactivo'].append(ContenidoInteractivoFieldsSerializer(element).data)
-
         return JsonResponse(data, safe=False)
+
 
 # Verificar que solo sea un usuario profesor el que acceda a este endpoint
 # Remove this authentication_classes. Only for testing
@@ -135,6 +137,36 @@ def courses_content_view(request, content_id):
         response.renderer_context = {}
         return response
 
+
+# Verificar que solo sea un usuario profesor el que acceda a este endpoint
+# Remove this authentication_classes. Only for testing
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def interactive_content_by_course(request, course_id):
+    # Tomando información del usuario
+    user_id = request.user.id
+    # Verificar que el docente tenga contenido creado
+    try:
+        # Recuperar el contenido que creó el profesor
+        user = request.user
+        user_with_roll = user.get_real_instance()
+        if user_with_roll.__class__.__name__ == 'Profesor':
+            contents_list = ContenidoInteractivo.objects.filter(curso__profesor=user_id, curso=course_id)
+
+    except (KeyError, Curso.DoesNotExist):
+        # devolver vacio si no existe contenido creado por el usuario
+        return JsonResponse({})
+    else:
+        # Devolver los resultados de la consulta en formato JSON
+        if not contents_list:
+            return JsonResponse({})
+        serializer_class = ContenidoInteractivoSerializer(contents_list, many=True)
+        response = Response(serializer_class.data, status=status.HTTP_200_OK)
+        response.accepted_renderer = JSONRenderer()
+        response.accepted_media_type = "application/json"
+        response.renderer_context = {}
+        return response
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
