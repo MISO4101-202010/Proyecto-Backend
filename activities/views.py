@@ -536,10 +536,9 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                 pregunta = PreguntaFoV.objects.filter(pk=preguntaVoF_id).get()
                 # obtenerEstudiante
                 estudianteObj = Estudiante.objects.filter(pk=estudiante_id).get()
-                # obtener curso segun la pregunta
-                curso = Curso.objects.filter(contenidointeractivo=pregunta.marca.contenido_id).get()
                 # Obtener grupo
-                grupo = Grupo.objects.filter(curso=curso.id, estudiante=estudiante_id).get()
+                # TODO Refactor para buscar el grupo según el estudiante y el grupo
+                grupo = Grupo.objects.all().first()
                 # Crear respuesta
                 respuestaFoV = RespuestaVoF()
                 respuestaFoV.estudiante = estudianteObj
