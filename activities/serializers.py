@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from rest_framework.fields import SerializerMethodField
+from rest_framework.fields import SerializerMethodField, IntegerField, CharField
 
-from activities.models import PreguntaOpcionMultiple, RespuestmultipleEstudiante, Opcionmultiple, Calificacion, Marca,\
-    PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, RespuestaVoF
+from activities.models import PreguntaOpcionMultiple, RespuestmultipleEstudiante, Opcionmultiple, Calificacion, Marca, \
+    PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, RespuestaVoF, Actividad
 
 
 class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
@@ -74,3 +74,14 @@ class PreguntaAbiertaSerializer(serializers.ModelSerializer):
     class Meta:
         model = PreguntaAbierta
         fields = '__all__'
+
+
+class MarcaConTipoActividadSerializer(serializers.ModelSerializer):
+    marca_id = IntegerField(source="marca.id")
+    nombre = CharField(source="marca.nombre")
+    punto = IntegerField(source="marca.punto")
+    contenido = IntegerField(source="marca.contenido_id")
+
+    class Meta:
+        model = Actividad
+        fields = ["tipoActividad", "marca_id", "nombre", "punto", "contenido"]
