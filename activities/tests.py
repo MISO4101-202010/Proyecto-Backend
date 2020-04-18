@@ -262,7 +262,7 @@ class RespuestaPreguntaFoV(TestCase):
                                           }
                                     )
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
 
 
 class PreguntaFoVTestCase(TestCase):
@@ -270,7 +270,7 @@ class PreguntaFoVTestCase(TestCase):
     def test_create_question(self):
         self.client = APIClient()
         marca, profesor, estudiante, _ = escenario3()
-        url = "/activities/pregunta_f_v/create"
+        url = "/activities/pregunta_f_v"
         pregunta = {
             "nombre": "test",
             "numeroDeIntentos": "1",
@@ -278,7 +278,7 @@ class PreguntaFoVTestCase(TestCase):
             "retroalimentacion": "",
             "pregunta": "¿Bogotá es la capital de Colombia?",
             "esVerdadero": True,
-            "marca_id": marca.pk
+            "marca": marca.pk
         }
         response = self.client.post(
             url, data=pregunta, format='json')
@@ -301,7 +301,7 @@ class PreguntaFoVTestCase(TestCase):
                                 pregunta="¿Django es un framework para apps móviles?", esVerdadero=False)
         pregunta4.save()
 
-        url = "/activities/pregunta_f_v/" + str(marca.pk) + "/"
+        url = "/activities/pregunta_f_v/" + str(marca2.pk)
         response = self.client.get(
             url, HTTP_AUTHORIZATION='Token ' + token_student.key, formal='json')
         self.assertEqual(response.status_code, 200)
@@ -333,7 +333,7 @@ class PauseTestCase(TestCase):
         response = self.client.get(url, formal='json')
         current_data = json.loads(response.content)
 
-        self.assertEqual(len(current_data), 1)
+        self.assertEqual(len(current_data.get('results')), 1)
 
     def test_pause_creation_by_profesor(self):
         marca = escenario()
