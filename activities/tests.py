@@ -306,6 +306,26 @@ class PreguntaFoVTestCase(TestCase):
             url, HTTP_AUTHORIZATION='Token ' + token_student.key, formal='json')
         self.assertEqual(response.status_code, 200)
 
+    def test_given_update_request__when_params_ok__then_return_suceess(self):
+        self.client = APIClient()
+        marca, profesor, _, _ = escenario3()
+        token = Token.objects.create(user=profesor)
+        question = PreguntaFoV.objects.create(id=23, nombre='test', numeroDeIntentos=1, marca=marca,
+                                              pregunta="¿Es python un lenguaje compilado?", esVerdadero=False)
+        url = '/activities/pregunta_f_v/update/23/'
+        data = {"pregunta": "Python es facil", "nombre": "Python", "retroalimentacion": "Si, python es facil",
+                "numeroDeIntentos": 2, "esVerdadero": True, "tieneRetroalimentacion": True}
+        response = self.client.put(url, format='json', data=data)
+        print("sssssssssss")
+        print(response.content)
+        response_data = json.loads(response.content)
+        self.assertEqual(response.status_code, 201,
+                         'Expected Response Code 201, received {0} instead.'
+                         .format(response.status_code))
+        self.assertEqual(len(response_data), 1)
+        self.assertEqual(response_data.get("id"), 23)
+        self.assertNotEqual(response_data.get("name"), "test")
+
 
 class PauseTestCase(TestCase):
 
