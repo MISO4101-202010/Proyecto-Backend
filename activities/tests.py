@@ -315,14 +315,11 @@ class PreguntaFoVTestCase(TestCase):
         url = '/activities/pregunta_f_v/update/23/'
         data = {"pregunta": "Python es facil", "nombre": "Python", "retroalimentacion": "Si, python es facil",
                 "numeroDeIntentos": 2, "esVerdadero": True, "tieneRetroalimentacion": True}
-        response = self.client.put(url, format='json', data=data)
-        print("sssssssssss")
-        print(response.content)
+        response = self.client.patch(url, format='json', data=data)
         response_data = json.loads(response.content)
-        self.assertEqual(response.status_code, 201,
-                         'Expected Response Code 201, received {0} instead.'
+        self.assertEqual(response.status_code, 200,
+                         'Expected Response Code 200, received {0} instead.'
                          .format(response.status_code))
-        self.assertEqual(len(response_data), 1)
         self.assertEqual(response_data.get("id"), 23)
         self.assertNotEqual(response_data.get("name"), "test")
 
