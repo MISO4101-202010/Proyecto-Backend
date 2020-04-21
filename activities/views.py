@@ -1,5 +1,7 @@
 from itertools import count
 
+from django import db
+from django.db import connection
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -7,6 +9,7 @@ from rest_framework.generics import GenericAPIView, ListCreateAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.utils import json
 from rest_framework.views import APIView
 
 from django.http import HttpResponseNotFound, JsonResponse
@@ -73,8 +76,9 @@ def reports(request, contentpk):
 
         for pregunta in preguntas_vof:
             if isinstance(pregunta, PreguntaFoV):
-                big_json['marcas'][-1]['preguntas'].append({'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
-                                                            'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
+                big_json['marcas'][-1]['preguntas'].append(
+                    {'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
+                     'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
                 howManyTrue = RespuestaVoF.objects.filter(
                     preguntaVoF=pregunta, esVerdadero=True).count()  # "howTrue":value
                 howManyFalse = RespuestaVoF.objects.filter(
@@ -306,27 +310,31 @@ class CalificarAPI(ListCreateAPIView):
             return Calificacion.objects.filter(actividad=None)
 
 
-class MarcaApi(ListModelMixin, GenericAPIView):
-
+class MarcaApi(APIView):
     def get_serializer_class(self):
         contenido = self.request.query_params.get('contenido', None)
         if contenido is not None:
             return MarcaConTipoActividadSerializer
         return MarcaSerializer
 
-    def get_queryset(self):
-        content = self.request.query_params.get('contenido', None)
-        marca = self.request.query_params.get('marca', None)
-        if content is not None:
-            response = Actividad.objects.filter(marca__contenido=content).select_related('marca')
-            return response
-        elif marca is not None:
-            return Marca.objects.filter(pk=marca)
-        else:
-            return Marca.objects.all()
-
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, *kwargs)
+        try:
+            content = self.request.query_params.get('contenido', None)
+            marca = self.request.query_params.get('marca', None)
+            if content is not None:
+                data = retrieve_mark_information(content)
+                return JsonResponse(data, status=status.HTTP_200_OK, safe=False)
+            elif marca is not None:
+                return JsonResponse(MarcaSerializer(Marca.objects.filter(pk=marca), many=True).data,
+                                    status=status.HTTP_200_OK, safe=False)
+            else:
+                return JsonResponse(MarcaSerializer(Marca.objects.all(), many=True).data, status=status.HTTP_200_OK,
+                                    safe=False)
+        except:
+            return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
+
+    # def get(self, request, *args, **kwargs):
+    #     return self.list(request, *args, *kwargs)
 
 
 def intentos_max(request):
@@ -393,7 +401,7 @@ def validate_resps(resps):
 class PausaDetail(ListCreateAPIView):
     queryset = Pausa.objects.all()
     serializer_class = PausaSerializer
-    authentication_classes = (TokenAuthentication, )
+    authentication_classes = (TokenAuthentication,)
     permission_classes = [IsAuthenticated, IsProfesor]
 
     def post(self, request, *args, **kwargs):
@@ -434,7 +442,7 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
             print('xxxx', pregunta1)
             pregunta = pregunta1[0]
 
-           # pregunta = pregunta1[0].preguntaSeleccionMultiple
+            # pregunta = pregunta1[0].preguntaSeleccionMultiple
             # valida si el intento de la respuesta es menor o igual al max de intentos permitidos
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
@@ -455,7 +463,6 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
 
 class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView):
-
     queryset = RespuestaVoF.objects.all()
     # clase serializer para la transformacion de datos del request
     serializer_class = RespuestaFoVSerializer
@@ -550,3 +557,24 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                 return Response(self.serializer_class(respuestaFoV).data, status=status.HTTP_200_OK)
         else:
             return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def retrieve_mark_information(contenido):
+    cursor = db.connection.cursor()
+    ## TODO Hay un problema en este query y no se puede calcular el numero de intentos de la respuesta con opción multiple, porque el objeto de respuesta de opcion multiple no tiene asociada la pregunta a la cual le corresponde
+    with open('activities/getInformacionMarca.sql', 'r') as file:
+        query = file.read().replace('\n', ' ').replace('\t', ' ')
+        cursor.execute(query, (contenido, contenido))
+        return dictfetchall(cursor)
+
+
+
+def dictfetchall(cursor):
+    "Return all rows from a cursor as a dict"
+    rows = cursor.fetchall()
+    result = []
+    keys = ('id','marca_id','tipoActividad','punto','nombre','contenido_id','numIntentos')
+    for row in rows:
+        result.append(dict(zip(keys, row)))
+    return result
+
