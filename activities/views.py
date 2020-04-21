@@ -128,6 +128,8 @@ def createOrGetMarca(question_data):
 class CreatePreguntaAbierta(APIView):
     def post(self, request, *args, **kwargs):
         question_data = request.data
+        if question_data.get('numeroDeIntentos') is None:
+            question_data['numeroDeIntentos'] = 1
         marca = createOrGetMarca(question_data)
         question = PreguntaAbierta.objects.create(marca=marca, **question_data)
         return Response(data=PreguntaAbiertaSerializer(question).data)
