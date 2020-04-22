@@ -1,5 +1,7 @@
 from itertools import count
 
+from django.core import serializers
+from django.forms import model_to_dict
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -7,6 +9,7 @@ from rest_framework.generics import GenericAPIView, ListCreateAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.utils import json
 from rest_framework.views import APIView
 
 from django.http import HttpResponseNotFound, JsonResponse
@@ -74,7 +77,7 @@ def reports(request, contentpk):
         for pregunta in preguntas_vof:
             if isinstance(pregunta, PreguntaFoV):
                 big_json['marcas'][-1]['preguntas'].append({'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
-                                                            'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
+                     'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
                 howManyTrue = RespuestaVoF.objects.filter(
                     preguntaVoF=pregunta, esVerdadero=True).count()  # "howTrue":value
                 howManyFalse = RespuestaVoF.objects.filter(
@@ -393,13 +396,33 @@ def validate_resps(resps):
 class PausaDetail(ListCreateAPIView):
     queryset = Pausa.objects.all()
     serializer_class = PausaSerializer
-    authentication_classes = (TokenAuthentication, )
+    authentication_classes = (TokenAuthentication,)
     permission_classes = [IsAuthenticated, IsProfesor]
 
     def post(self, request, *args, **kwargs):
         question_data = request.data
+        marca_id = None
+        pausa_id = None
+        try:
+            marca_id = question_data.get('marca_id')
+        except:
+            marca_id = None
+
+        try:
+            pausa_id = question_data.pop('pausa_id', None)
+        except:
+            pausa_id = None
         marca = createOrGetMarca(question_data)
-        question = Pausa.objects.create(marca=marca, **question_data)
+        if marca_id is None:
+            question = Pausa.objects.create(marca=marca, **question_data)
+        else:
+            marca.nombre = question_data['nombre']
+            marca.save()
+            question = Pausa.objects.get(id=pausa_id)
+            question.tiempo = question_data['tiempo']
+            question.enunciado = question_data['enunciado']
+            question.save()
+
         return Response(data=PausaSerializer(question).data, status=status.HTTP_201_CREATED)
 
 
@@ -434,7 +457,7 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
             print('xxxx', pregunta1)
             pregunta = pregunta1[0]
 
-           # pregunta = pregunta1[0].preguntaSeleccionMultiple
+            # pregunta = pregunta1[0].preguntaSeleccionMultiple
             # valida si el intento de la respuesta es menor o igual al max de intentos permitidos
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
@@ -455,7 +478,6 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
 
 class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView):
-
     queryset = RespuestaVoF.objects.all()
     # clase serializer para la transformacion de datos del request
     serializer_class = RespuestaFoVSerializer
