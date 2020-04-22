@@ -63,6 +63,7 @@ class PreguntaFoVSerializer(serializers.ModelSerializer):
         model = PreguntaFoV
         fields = '__all__'
 
+
 class PreguntaFoVModificacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PreguntaFoV
