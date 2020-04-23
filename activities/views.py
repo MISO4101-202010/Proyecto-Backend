@@ -5,7 +5,7 @@ from django.forms import model_to_dict
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.generics import GenericAPIView, ListCreateAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -393,13 +393,13 @@ def validate_resps(resps):
     return max_int
 
 
-class PausaDetail(ListCreateAPIView):
+class PausaDetail(RetrieveUpdateAPIView):
     queryset = Pausa.objects.all()
     serializer_class = PausaSerializer
     authentication_classes = (TokenAuthentication,)
     permission_classes = [IsAuthenticated, IsProfesor]
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         question_data = request.data
         marca_id = None
         pausa_id = None
