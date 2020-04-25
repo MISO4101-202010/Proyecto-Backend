@@ -14,7 +14,6 @@ Backend del proyecto MISO4101-202010
 
 ***
 
-
 ## Instalación del entorno de desarrollo
 
 ### MacOS
