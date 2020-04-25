@@ -2,6 +2,8 @@ from django.test import TestCase
 from django.utils.timezone import make_aware
 from datetime import datetime
 import json
+
+from rest_framework import status
 from rest_framework.utils import json
 from rest_framework.test import APIClient
 
@@ -591,3 +593,31 @@ class CalificacionCase(TestCase):
         response = self.client.get(url, format='json')
         current_data = json.loads(response.content)
         self.assertEqual(current_data['count'], 2)
+
+class MarcaTestCases (TestCase):
+    def test_update_marca_normal_scenario(self):
+        profe = Profesor.objects.create(
+            username='profe12', password='profe123', facultad='Ingenieria')
+        contenido = Contenido.objects.create(
+            url='www.ejemplo.com', nombre='Contenido', profesor=profe)
+        cont_interac = ContenidoInteractivo.objects.create(
+            contenido=contenido, tiene_retroalimentacion=False)
+        marca = Marca()
+        marca.contenido = cont_interac
+        marca.nombre = "marca1"
+        marca.punto = 20
+        marca.save();
+        url = '/activities/marca'
+        new_marca = {"marca_id": marca.id, "nombre": "marca2", "punto": 30}
+        response = self.client.put(url, new_marca, format='json')
+        current_data = json.loads(response.content)
+        self.assertEqual(current_data["marca_id"], new_marca["marca_id"])
+        self.assertEqual(current_data["nombre"], new_marca["nombre"])
+        self.assertEqual(current_data["punto"], new_marca["punto"])
+
+    def test_update_marca_wrong_id_scenario(self):
+        url = '/activities/marca'
+        new_marca = {"marca_id": 99999999, "nombre": "marca2", "punto": 30}
+        response = self.client.put(url, new_marca, format='json')
+        current_data = json.loads(response.content)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
