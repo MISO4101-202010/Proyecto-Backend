@@ -608,16 +608,15 @@ class MarcaTestCases (TestCase):
         marca.punto = 20
         marca.save();
         url = '/activities/marca'
-        new_marca = {"marca_id": marca.id, "nombre": "marca2", "punto": 30}
-        response = self.client.put(url, new_marca, format='json')
+        new_marca = {'marca_id': marca.id, 'nombre': 'marca2', 'punto': 30}
+        response = self.client.put(url, json.dumps(new_marca), content_type='application/json')
         current_data = json.loads(response.content)
-        self.assertEqual(current_data["marca_id"], new_marca["marca_id"])
+        self.assertEqual(current_data["id"], new_marca["marca_id"])
         self.assertEqual(current_data["nombre"], new_marca["nombre"])
         self.assertEqual(current_data["punto"], new_marca["punto"])
 
     def test_update_marca_wrong_id_scenario(self):
         url = '/activities/marca'
         new_marca = {"marca_id": 99999999, "nombre": "marca2", "punto": 30}
-        response = self.client.put(url, new_marca, format='json')
-        current_data = json.loads(response.content)
+        response = self.client.put(url, new_marca, content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
