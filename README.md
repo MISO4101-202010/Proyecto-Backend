@@ -1,6 +1,8 @@
 # Proyecto-Backend
 
-[![Codeship Status for MISO4101-202010/Proyecto-Backend](https://app.codeship.com/projects/8990d090-6974-0138-28d7-22c0d1c6829f/status?branch=master)](https://app.codeship.com/projects/394223)
+[![Codeship Status for MISO4101-202010/Proyecto-Backend](https://app.codeship.com/projects/8990d090-6974-0138-28d7-22c0d1c6829f/status?branch=SP2-Integracion)](https://app.codeship.com/projects/394223)
+
+[![Codeship Status for MISO4101-202010/Proyecto-Backend](https://app.codeship.com/projects/8990d090-6974-0138-28d7-22c0d1c6829f/status?branch=SP2-Release)](https://app.codeship.com/projects/394223)
 
 Backend del proyecto MISO4101-202010
 
