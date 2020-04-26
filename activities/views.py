@@ -116,6 +116,14 @@ class MarcaView(ListModelMixin, CreateModelMixin, GenericAPIView):
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+    def put(self, request, *args, **kwargs):
+        marca_id = self.request.data.get('marca_id')
+        marca = get_object_or_404(Marca, id =marca_id)
+        marca.nombre = self.request.data.get('nombre')
+        marca.punto = self.request.data.get('punto')
+        marca.save()
+        return Response(data=MarcaSerializer(marca).data)
+
 
 def createOrGetMarca(question_data):
     marca_id = question_data.pop('marca_id', None)
