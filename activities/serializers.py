@@ -64,6 +64,12 @@ class PreguntaFoVSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class PreguntaFoVModificacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PreguntaFoV
+        fields = ('pregunta', 'nombre', 'retroalimentacion', 'numeroDeIntentos', 'esVerdadero', 'tieneRetroalimentacion')
+
+
 class PausaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pausa

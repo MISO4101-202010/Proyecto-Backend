@@ -5,12 +5,14 @@ from django.forms import model_to_dict
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
+
 from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView
-from rest_framework.mixins import ListModelMixin, CreateModelMixin
+from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.utils import json
 from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -131,6 +133,8 @@ def createOrGetMarca(question_data):
 class CreatePreguntaAbierta(APIView):
     def post(self, request, *args, **kwargs):
         question_data = request.data
+        if question_data.get('numeroDeIntentos') is None:
+            question_data['numeroDeIntentos'] = 1
         marca = createOrGetMarca(question_data)
         question = PreguntaAbierta.objects.create(marca=marca, **question_data)
         return Response(data=PreguntaAbiertaSerializer(question).data)
@@ -625,3 +629,10 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                 return Response(self.serializer_class(respuestaFoV).data, status=status.HTTP_200_OK)
         else:
             return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class PreguntaVoFModificacionViewSet(GenericViewSet, UpdateModelMixin):
+    queryset = PreguntaFoV.objects.all()
+    serializer_class = PreguntaFoVSerializer
+    http_method_names = ['patch']
