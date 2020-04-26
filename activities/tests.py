@@ -308,9 +308,8 @@ class PreguntaFoVTestCase(TestCase):
 
     def test_given_update_request__when_params_ok__then_return_suceess(self):
         self.client = APIClient()
-        marca, profesor, _, _ = escenario3()
-        token = Token.objects.create(user=profesor)
-        question = PreguntaFoV.objects.create(id=23, nombre='test', numeroDeIntentos=1, marca=marca,
+        marca, _, _, _ = escenario3()
+        PreguntaFoV.objects.create(id=23, nombre='test', numeroDeIntentos=1, marca=marca,
                                               pregunta="¿Es python un lenguaje compilado?", esVerdadero=False)
         url = '/activities/pregunta_f_v/update/23/'
         data = {"pregunta": "Python es facil", "nombre": "Python", "retroalimentacion": "Si, python es facil",
