@@ -29,10 +29,13 @@ class AddOpenQuestionTestCase(TestCase):
         marca = Marca.objects.create(nombre="Nueva Marca", contenido=contenidoInteractivo)
         response = self.client.post(self.url, {
             "marca_id": marca.id,
-            "enunciado": "Nueva Pregunta Abierta?"
+            "enunciado": "Nueva Pregunta Abierta?",
+            "tieneRetroalimentacion": False,
+            "retroalimentacion": "Debia responder otra vaina"
         }, format='json', HTTP_AUTHORIZATION='Token ' + self.token.key)
         current_data = json.loads(response.content)
         self.assertEqual(current_data['enunciado'], 'Nueva Pregunta Abierta?')
+        self.assertEqual(current_data['tieneRetroalimentacion'],False)
 
 
 def escenario():
@@ -164,16 +167,17 @@ def escenario3():
                                                 )
     contenidoInteractivo.save()
     contenidoInteractivo.curso.add(curso)
-
+    
     marca = Marca(nombre="marca1",
                   punto=33,
-                  contenido=contenidoInteractivo
+                  contenido=contenidoInteractivo,
                   )
     marca.save()
+
     return marca, profesor, estudiante, contenidoInteractivo
 
 
-class PreguntaTestCase(TestCase):
+class PreguntaOpcionMultipleTestCase(TestCase):
 
     def test_Get_Pregunta(self):
         marca = escenario()
@@ -192,6 +196,27 @@ class PreguntaTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
+    def test_Create_PreguntaOpcionMultiple(self):
+        marca = escenario()
+        url = "/activities/generate-question-multiple-choice"
+        pregunta = {
+            "nombre": "test",
+            "numeroDeIntentos": "1",
+            "tieneRetroalimentacion": False,
+            "retroalimentacion": "",
+            "esMultipleResp": False,
+            "enunciado": "¿Cuál es el número ganador?",
+            "marca_id": marca.id,
+            "opciones":[
+                {"opcion":"1","esCorrecta": True},
+                {"opcion":"2","esCorrecta": False},
+                {"opcion":"3","esCorrecta": False}]
+        }
+        self.client=APIClient()
+        response = self.client.post(
+            url, data=pregunta, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'],False)
 
 class RespuestaPreguntaAbiertaTestCase(TestCase):
 
@@ -269,7 +294,7 @@ class PreguntaFoVTestCase(TestCase):
 
     def test_create_question(self):
         self.client = APIClient()
-        marca, profesor, estudiante, _ = escenario3()
+        marca = escenario()
         url = "/activities/pregunta_f_v"
         pregunta = {
             "nombre": "test",
@@ -283,6 +308,7 @@ class PreguntaFoVTestCase(TestCase):
         response = self.client.post(
             url, data=pregunta, format='json')
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'],False)
 
     def test_filter_question(self):
         marca, profesor, estudiante, _ = escenario3()
@@ -477,11 +503,6 @@ class CalificacionCase(TestCase):
             estudiante=estudiante1, actividad=pregunta, calificacion=4.5)
         Calificacion.objects.create(
             estudiante=estudiante2, actividad=pregunta, calificacion=3.5)
-
-        # url = '/activities/calificacion'
-        # response = self.client.get(url, format='json')
-        # current_data = json.loads(response.content)
-        # self.assertEqual(len(current_data), 2)
 
     def test_filter_calificaiones_by_student(self):
         profe = Profesor.objects.create(
