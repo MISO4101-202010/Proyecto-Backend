@@ -87,7 +87,6 @@ class MarcaConTipoActividadSerializer(serializers.ModelSerializer):
     nombre = CharField(source="marca.nombre")
     punto = IntegerField(source="marca.punto")
     contenido = IntegerField(source="marca.contenido_id")
-    #numIntentosFaltantes =
 
     class Meta:
         model = Actividad
