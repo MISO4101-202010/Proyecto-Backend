@@ -149,7 +149,7 @@ class InteractiveContentTestCase(TestCase):
         token, created = Token.objects.get_or_create(user=student)
         student_token = token.key if created else ''
 
-        response = self.client.get('/content/mycourses', format='json', headers=self.headers, HTTP_AUTHORIZATION='Token ' + student_token)
+        response = self.client.get('/content/mycourses/', format='json', headers=self.headers, HTTP_AUTHORIZATION='Token ' + student_token)
 
         data = json.loads(response.content)
 
