@@ -21,7 +21,6 @@ class Actividad(models.Model):
     retroalimentacion = models.CharField(max_length=200, null=True, blank=True)
     tipoActividad = models.IntegerField(blank=False, default=0)
 
-
     def __str__(self):
         return self.nombre
 

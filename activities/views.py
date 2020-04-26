@@ -5,10 +5,11 @@ from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.generics import GenericAPIView, ListCreateAPIView
-from rest_framework.mixins import ListModelMixin, CreateModelMixin
+from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -74,9 +75,8 @@ def reports(request, contentpk):
 
         for pregunta in preguntas_vof:
             if isinstance(pregunta, PreguntaFoV):
-                big_json['marcas'][-1]['preguntas'].append(
-                    {'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
-                     'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
+                big_json['marcas'][-1]['preguntas'].append({'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
+                                                            'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
                 howManyTrue = RespuestaVoF.objects.filter(
                     preguntaVoF=pregunta, esVerdadero=True).count()  # "howTrue":value
                 howManyFalse = RespuestaVoF.objects.filter(
@@ -130,6 +130,8 @@ def createOrGetMarca(question_data):
 class CreatePreguntaAbierta(APIView):
     def post(self, request, *args, **kwargs):
         question_data = request.data
+        if question_data.get('numeroDeIntentos') is None:
+            question_data['numeroDeIntentos'] = 1
         marca = createOrGetMarca(question_data)
         question = PreguntaAbierta.objects.create(marca=marca, **question_data)
         return Response(data=PreguntaAbiertaSerializer(question).data)
@@ -331,8 +333,6 @@ class MarcaApi(APIView):
         except:
             return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
 
-    # def get(self, request, *args, **kwargs):
-    #     return self.list(request, *args, *kwargs)
 
 
 def intentos_max(request):
@@ -399,7 +399,7 @@ def validate_resps(resps):
 class PausaDetail(ListCreateAPIView):
     queryset = Pausa.objects.all()
     serializer_class = PausaSerializer
-    authentication_classes = (TokenAuthentication,)
+    authentication_classes = (TokenAuthentication, )
     permission_classes = [IsAuthenticated, IsProfesor]
 
     def post(self, request, *args, **kwargs):
@@ -440,7 +440,7 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
             print('xxxx', pregunta1)
             pregunta = pregunta1[0]
 
-            # pregunta = pregunta1[0].preguntaSeleccionMultiple
+           # pregunta = pregunta1[0].preguntaSeleccionMultiple
             # valida si el intento de la respuesta es menor o igual al max de intentos permitidos
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
@@ -461,6 +461,7 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
 
 class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView):
+
     queryset = RespuestaVoF.objects.all()
     # clase serializer para la transformacion de datos del request
     serializer_class = RespuestaFoVSerializer
@@ -566,7 +567,6 @@ def retrieve_mark_information(contenido):
         return dictfetchall(cursor)
 
 
-
 def dictfetchall(cursor):
     "Return all rows from a cursor as a dict"
     rows = cursor.fetchall()
@@ -576,3 +576,8 @@ def dictfetchall(cursor):
         result.append(dict(zip(keys, row)))
     return result
 
+
+class PreguntaVoFModificacionViewSet(GenericViewSet, UpdateModelMixin):
+    queryset = PreguntaFoV.objects.all()
+    serializer_class = PreguntaFoVSerializer
+    http_method_names = ['patch']
