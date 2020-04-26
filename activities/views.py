@@ -130,14 +130,39 @@ def createOrGetMarca(question_data):
     return marca
 
 
-class CreatePreguntaAbierta(APIView):
-    def post(self, request, *args, **kwargs):
+class CreatePreguntaAbierta(RetrieveUpdateAPIView):
+    queryset = PreguntaAbierta.objects.all()
+    serializer_class = PreguntaAbiertaSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = [IsAuthenticated, IsProfesor]
+
+    def put(self, request, *args, **kwargs):
         question_data = request.data
+
+        try:
+            marca_id = question_data.get('marca_id')
+        except:
+            marca_id = None
+
+        try:
+            abierta_id = question_data.get('abierta_id')
+        except:
+            abierta_id = None
+
         if question_data.get('numeroDeIntentos') is None:
             question_data['numeroDeIntentos'] = 1
+
         marca = createOrGetMarca(question_data)
-        question = PreguntaAbierta.objects.create(marca=marca, **question_data)
-        return Response(data=PreguntaAbiertaSerializer(question).data)
+
+        if marca_id is None:
+            question = PreguntaAbierta.objects.create(marca=marca, **question_data)
+        else:
+            question = PreguntaAbierta.objects.get(id=abierta_id)
+            question.nombre = question_data['nombre']
+            question.enunciado = question_data['enunciado']
+            question.save()
+        return Response(data=PreguntaAbiertaSerializer(question).data, status=status.HTTP_201_CREATED)
+
 
 
 def index_of(val, in_list):
