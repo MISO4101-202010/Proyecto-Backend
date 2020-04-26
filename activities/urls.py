@@ -1,13 +1,17 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework import routers
 
 from activities.views import CalificarAPI, MarcaApi, intentos_max, GetPausesView, GetPreguntaAbierta, \
     MarcaView, reports, RespuestaSeleccionMultipleView, CreatePreguntaSeleccionMultiple, PausaDetail, \
     CreatePreguntaAbierta, DetailPreguntaSeleccionMultiple, \
     tipo_actividad, PreguntaFoVGetOne, PreguntaFoVView, \
-    RespuestaFoVView, RespuestaAbiertaView, DetailPreguntaAbierta
+    RespuestaFoVView, RespuestaAbiertaView, DetailPreguntaAbierta, PreguntaVoFModificacionViewSet
 
 app_name = 'activities'
 # add url path to the API
+
+router = routers.DefaultRouter()
+router.register('pregunta_f_v/update', PreguntaVoFModificacionViewSet)
 
 urlpatterns = [
     path('marca', MarcaView.as_view(), name='marca'),
@@ -30,4 +34,5 @@ urlpatterns = [
     path('pregunta_abierta/<int:marca>/', GetPreguntaAbierta.as_view(), name="pregunta abierta"),
     path('create-pausa/', PausaDetail.as_view(), name="create pauses"),
     path('tipo_actividad', tipo_actividad),
+    path('', include(router.urls)),
 ]
