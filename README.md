@@ -1,8 +1,8 @@
 # Proyecto-Backend
 
-[![Codeship Status for MISO4101-202010/Proyecto-Backend](https://app.codeship.com/projects/8990d090-6974-0138-28d7-22c0d1c6829f/status?branch=SP2-Integracion)](https://app.codeship.com/projects/394223)
-
-[![Codeship Status for MISO4101-202010/Proyecto-Backend](https://app.codeship.com/projects/8990d090-6974-0138-28d7-22c0d1c6829f/status?branch=SP2-Release)](https://app.codeship.com/projects/394223)
+|SP2-Integracion|SP2-Release|Codacy|
+|---|---|---|
+|[![Codeship Status for MISO4101-202010/Proyecto-Backend](https://app.codeship.com/projects/5db252f0-697c-0138-1110-6a1b1fd1aa4f/status?branch=SP2-Integracion)](https://app.codeship.com/projects/394230)|[![Codeship Status for MISO4101-202010/Proyecto-Backend](https://app.codeship.com/projects/5db252f0-697c-0138-1110-6a1b1fd1aa4f/status?branch=SP2-Release)](https://app.codeship.com/projects/394230)|[![Codacy Badge](https://api.codacy.com/project/badge/Grade/4be13517ea7d45b4ac36718541bb1c77)](https://www.codacy.com/gh/MISO4101-202010/Proyecto-Backend?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=MISO4101-202010/Proyecto-Backend&amp;utm_campaign=Badge_Grade)|
 
 Backend del proyecto MISO4101-202010
 
