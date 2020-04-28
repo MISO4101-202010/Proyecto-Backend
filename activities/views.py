@@ -12,7 +12,6 @@ from rest_framework.viewsets import GenericViewSet
 
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
     PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
-from activities.paginations import CustomPageNumberPagination
 from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
     RespuestaSeleccionMultipleSerializer, MarcaSerializer, PreguntaFoVSerializer, PausaSerializer, \
     PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, MarcaConTipoActividadSerializer
@@ -390,7 +389,7 @@ class CalificarAPI(ListCreateAPIView):
 
 
 class MarcaApi(ListModelMixin, GenericAPIView):
-    pagination_class = CustomPageNumberPagination
+    pagination_class = None
 
     def get_serializer_class(self):
         contenido = self.request.query_params.get('contenido', None)
