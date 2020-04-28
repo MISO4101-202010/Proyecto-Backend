@@ -1,36 +1,25 @@
-from itertools import count
-
-from django.core import serializers
-from django.forms import model_to_dict
+from django.http import HttpResponseNotFound, JsonResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-
 from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.utils import json
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from django.http import HttpResponseNotFound, JsonResponse
-from django.shortcuts import get_object_or_404
-
+from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
+    PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
+from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
+    RespuestaSeleccionMultipleSerializer, MarcaSerializer, PreguntaFoVSerializer, PausaSerializer, \
+    PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, MarcaConTipoActividadSerializer
+from interactive_content.models import ContenidoInteractivo, Grupo
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
-from interactive_content.models import ContenidoInteractivo, Curso, Grupo
-
-from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
-    RespuestaSeleccionMultipleSerializer, MarcaSerializer, \
-    PreguntaFoVSerializer, PausaSerializer, PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, \
-    RespuestaFoVSerializer, MarcaConTipoActividadSerializer
-from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, \
-    Opcionmultiple, PreguntaOpcionMultiple, PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, \
-    RespuestaAbiertaEstudiante
 
 
-# Create your views here.
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -400,6 +389,7 @@ class CalificarAPI(ListCreateAPIView):
 
 
 class MarcaApi(ListModelMixin, GenericAPIView):
+    pagination_class = None
 
     def get_serializer_class(self):
         contenido = self.request.query_params.get('contenido', None)
