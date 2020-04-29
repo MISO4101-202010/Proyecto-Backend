@@ -24,7 +24,7 @@ from interactive_content.models import ContenidoInteractivo, Curso, Grupo
 from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
     RespuestaSeleccionMultipleSerializer, MarcaSerializer, \
     PreguntaFoVSerializer, PausaSerializer, PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, \
-    RespuestaFoVSerializer, MarcaConTipoActividadSerializer
+    RespuestaFoVSerializer, MarcaConTipoActividadSerializer, ActividadPreguntaSerializer, ContenidoInteractivoRetroalimentacionSerializer
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, \
     Opcionmultiple, PreguntaOpcionMultiple, PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, \
     RespuestaAbiertaEstudiante
@@ -669,3 +669,27 @@ class PreguntaVoFModificacionViewSet(GenericViewSet, UpdateModelMixin):
     queryset = PreguntaFoV.objects.all()
     serializer_class = PreguntaFoVSerializer
     http_method_names = ['patch']
+
+class GetRetroalimentacion(ListModelMixin, GenericAPIView):
+    serializer_class = ContenidoInteractivoRetroalimentacionSerializer
+    lookup_url_kwarg = "id"
+
+    def get_queryset(self):
+        id = self.kwargs.get(self.lookup_url_kwarg)
+        # interactive_content = ContenidoInteractivo.objects.get(id=id)
+
+        return ContenidoInteractivo.objects.filter(id=id)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, *kwargs)
+
+class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
+    serializer_class = ActividadPreguntaSerializer
+    lookup_url_kwarg = "id"
+
+    def get_queryset(self):
+        marca = self.kwargs.get(self.lookup_url_kwarg)
+        return Actividad.objects.filter(id=marca,tieneRetroalimentacion=True)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, *kwargs)
