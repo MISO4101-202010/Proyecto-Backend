@@ -19,25 +19,98 @@ class AddOpenQuestionTestCase(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.user = Profesor.objects.create_superuser('admin', 'admin@admin.com', 'admin123')
-        self.token = Token.objects.create(user=self.user)
+        self.userProfesor = Profesor.objects.create_superuser('admin', 'admin@admin.com', 'admin123')
+        self.tokenProfesor = Token.objects.create(user=self.userProfesor)
+        self.userEstudiante = Estudiante.objects.create_superuser('admin2', 'admin@admin.com', 'admin123')
+        self.tokenEstudiante = Token.objects.create(user=self.userEstudiante)
         self.url = '/activities/generate-open-question'
         self.headers = {'Content-Type': 'application/json'}
 
-    def test_add_open_question_and_mark(self):
-        contenido = Contenido.objects.create(url="https://url.com", nombre="Nombre Contenido", profesor=self.user)
+    def test_add_open_question_and_mark_profesor(self):
+        contenido = Contenido.objects.create(url="https://url.com", nombre="Nombre Contenido",
+                                             profesor=self.userProfesor)
         contenidoInteractivo = ContenidoInteractivo.objects.create(nombre="Contenido INteractivo test",
                                                                    contenido=contenido, fecha_creacion="05-08-2019")
         marca = Marca.objects.create(nombre="Nueva Marca", contenido=contenidoInteractivo)
-        response = self.client.post(self.url, {
-            "marca_id": marca.id,
+        response = self.client.put(self.url, {
+            "marca": {"nombre": marca.nombre, "punto": marca.punto, "contenido_id": marca.contenido_id},
             "enunciado": "Nueva Pregunta Abierta?",
             "tieneRetroalimentacion": False,
             "retroalimentacion": "Debia responder otra vaina"
-        }, format='json', HTTP_AUTHORIZATION='Token ' + self.token.key)
+        }, format='json', HTTP_AUTHORIZATION='Token ' + self.tokenProfesor.key)
         current_data = json.loads(response.content)
+
         self.assertEqual(current_data['enunciado'], 'Nueva Pregunta Abierta?')
-        self.assertEqual(current_data['tieneRetroalimentacion'],False)
+        self.assertEqual(current_data['tieneRetroalimentacion'], False)
+
+    def test_add_open_question_and_mark_estudiante(self):
+        contenido = Contenido.objects.create(url="https://url.com", nombre="Nombre Contenido",
+                                             profesor=self.userProfesor)
+        contenidoInteractivo = ContenidoInteractivo.objects.create(nombre="Contenido INteractivo test",
+                                                                   contenido=contenido, fecha_creacion="05-08-2019")
+        marca = Marca.objects.create(nombre="Nueva Marca", contenido=contenidoInteractivo)
+        response = self.client.put(self.url, {
+            "marca": {"nombre": marca.nombre, "punto": marca.punto, "contenido_id": marca.contenido_id},
+            "enunciado": "Nueva Pregunta Abierta?",
+            "tieneRetroalimentacion": False,
+            "retroalimentacion": "Debia responder otra vaina"
+        }, format='json', HTTP_AUTHORIZATION='Token ' + self.tokenEstudiante.key)
+        self.assertEqual(response.status_code, 403)
+
+
+    def test_update_open_question_and_mark_profesor(self):
+        contenido = Contenido.objects.create(url="https://url.com", nombre="Nombre Contenido",
+                                             profesor=self.userProfesor)
+        contenidoInteractivo = ContenidoInteractivo.objects.create(nombre="Contenido INteractivo test",
+                                                                   contenido=contenido, fecha_creacion="05-08-2019")
+        marca = Marca.objects.create(nombre="Nueva Marca", contenido=contenidoInteractivo)
+        pregunta = PreguntaAbierta()
+        pregunta.enunciado = "Nueva Pregunta Abierta?"
+        pregunta.marca = marca
+        pregunta.retroalimentacion = "Debia responder otra vaina"
+        pregunta.tieneRetroalimentacion = False
+        pregunta.nombre = "Nombre Pregunta"
+        pregunta.save()
+        response = self.client.put(self.url, {
+            "marca_id": marca.id,
+            "abierta_id": pregunta.id,
+            "marca": {"nombre": marca.nombre, "punto": marca.punto, "contenido_id": marca.contenido_id},
+            "enunciado": "Actualizando pregunta?",
+            "tieneRetroalimentacion": True,
+            "retroalimentacion": "Debia responder otra vaina",
+            "nombre": "Otro nombre"
+        }, format='json', HTTP_AUTHORIZATION='Token ' + self.tokenProfesor.key)
+        current_data = json.loads(response.content)
+
+        self.assertEqual(current_data['enunciado'], 'Actualizando pregunta?')
+        self.assertEqual(current_data['nombre'], 'Otro nombre')
+
+
+    def test_update_open_question_and_mark_estudiante(self):
+        contenido = Contenido.objects.create(url="https://url.com", nombre="Nombre Contenido",
+                                             profesor=self.userProfesor)
+        contenidoInteractivo = ContenidoInteractivo.objects.create(nombre="Contenido INteractivo test",
+                                                                   contenido=contenido, fecha_creacion="05-08-2019")
+        marca = Marca.objects.create(nombre="Nueva Marca", contenido=contenidoInteractivo)
+        pregunta = PreguntaAbierta()
+        pregunta.enunciado = "Nueva Pregunta Abierta?"
+        pregunta.marca = marca
+        pregunta.retroalimentacion = "Debia responder otra vaina"
+        pregunta.nombre = "Nombre Pregunta"
+        pregunta.tieneRetroalimentacion = False
+        pregunta.save()
+        response = self.client.put(self.url, {
+            "marca_id": marca.id,
+            "abierta_id": pregunta.id,
+            "marca": {"nombre": marca.nombre, "punto": marca.punto, "contenido_id": marca.contenido_id},
+            "enunciado": "Actualizando pregunta?",
+            "tieneRetroalimentacion": True,
+            "retroalimentacion": "Debia responder otra vaina",
+            "nombre": "Otro nombre"
+        }, format='json', HTTP_AUTHORIZATION='Token ' + self.tokenEstudiante.key)
+        current_data = json.loads(response.content)
+
+        self.assertEqual(response.status_code, 403)
 
 
 def escenario():
@@ -180,17 +253,23 @@ def escenario3():
 
 
 class PreguntaOpcionMultipleTestCase(TestCase):
+    def setUp(self):
+        self.marca = escenario()
+        self.client = APIClient()
+        self.userProfesor = Profesor.objects.get(id=33333)#.create_superuser('admin', 'admin@admin.com', 'admin123')
+        self.tokenProfesor = Token.objects.create(user=self.userProfesor)
+        self.userEstudiante = Estudiante.objects.get(id=22333)#.create_superuser('admin', 'admin@admin.com', 'admin123')
+        self.tokenEstudiante = Token.objects.create(user=self.userEstudiante)
+        self.url = '/activities/generate-question-multiple-choice'
 
     def test_Get_Pregunta(self):
-        marca = escenario()
-
         pregunta = PreguntaOpcionMultiple()
         pregunta.nombre = "pregunta1"
         pregunta.enunciado = "enunciado"
         pregunta.numeroDeIntentos = 1
         pregunta.tieneRetroalimentacion = True
         pregunta.esMultipleResp = True
-        pregunta.marca_id = marca.id
+        pregunta.marca_id = self.marca.id
         pregunta.save()
 
         url = "/activities/preguntaOpcionMultiple" + '/' + str(pregunta.pk) + '/'
@@ -198,27 +277,117 @@ class PreguntaOpcionMultipleTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-    def test_Create_PreguntaOpcionMultiple(self):
-        marca = escenario()
-        url = "/activities/generate-question-multiple-choice"
+    def test_Create_PreguntaOpcionMultipleProfesor(self):
         pregunta = {
             "nombre": "test",
-            "numeroDeIntentos": "1",
+            "numeroDeIntentos": 1,
             "tieneRetroalimentacion": False,
-            "retroalimentacion": "",
             "esMultipleResp": False,
             "enunciado": "¿Cuál es el número ganador?",
-            "marca_id": marca.id,
+            "marca": {"nombre": self.marca.nombre, "punto": self.marca.punto, "contenido_id": self.marca.contenido_id},
             "opciones":[
                 {"opcion":"1","esCorrecta": True},
                 {"opcion":"2","esCorrecta": False},
                 {"opcion":"3","esCorrecta": False}]
         }
-        self.client=APIClient()
-        response = self.client.post(
-            url, data=pregunta, format='json')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'],False)
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.tokenProfesor.key)
+        response = self.client.put(self.url, data=pregunta, format='json')
+        self.seleccionMultipleId = response;
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'], False)
+
+
+    def test_Update_PreguntaOpcionMultipleProfesor(self):
+        pregunta = PreguntaOpcionMultiple()
+        pregunta.nombre = "pregunta1"
+        pregunta.enunciado = "enunciado"
+        pregunta.numeroDeIntentos = 1
+        pregunta.tieneRetroalimentacion = True
+        pregunta.esMultipleResp = True
+        pregunta.marca_id = self.marca.id
+        pregunta.save()
+        opcion = Opcionmultiple();
+        opcion.esCorrecta = True
+        opcion.opcion = "opcion 1"
+        opcion.preguntaSeleccionMultiple = pregunta;
+        opcion.save()
+        preguntaJson = {
+            "enunciado": "¿Cuál es el número ganador?",
+            "esMultipleResp": False,
+            "marca": {"nombre": self.marca.nombre,
+                      "punto": self.marca.punto,
+                      "marca_id": self.marca.id,
+                      "tipoActividad": 0,
+                      "contenido": self.marca.contenido_id},
+            "marca_id": self.marca.id,
+            "nombre": "test",
+            "numeroDeIntentos": 2,
+            "seleccion_multiple_id": pregunta.id,
+            "tieneRetroalimentacion": False,
+            "opciones":[
+                {"opcion_id": opcion.id, "opcion": "1", "esCorrecta": True}]
+        }
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.tokenProfesor.key)
+        response = self.client.put(self.url, data=preguntaJson, format='json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(json.loads(response.content)['numeroDeIntentos'], 2)
+        self.assertEqual(json.loads(response.content)['nombre'], 'test')
+        self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'], False)
+
+    def test_Create_PreguntaOpcionMultipleEstudiante(self):
+        pregunta = {
+            "nombre": "test",
+            "numeroDeIntentos": 1,
+            "tieneRetroalimentacion": False,
+            "esMultipleResp": False,
+            "enunciado": "¿Cuál es el número ganador?",
+            "marca": {"nombre": self.marca.nombre, "punto": self.marca.punto, "contenido_id": self.marca.contenido_id},
+            "opciones":[
+                {"opcion":"1","esCorrecta": True},
+                {"opcion":"2","esCorrecta": False},
+                {"opcion":"3","esCorrecta": False}]
+        }
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.tokenEstudiante.key)
+        response = self.client.put(self.url, data=pregunta, format='json')
+        self.seleccionMultipleId = response;
+        self.assertEqual(response.status_code, 403)
+
+
+    def test_Update_PreguntaOpcionMultipleEstudiante(self):
+        pregunta = PreguntaOpcionMultiple()
+        pregunta.nombre = "pregunta1"
+        pregunta.enunciado = "enunciado"
+        pregunta.numeroDeIntentos = 1
+        pregunta.tieneRetroalimentacion = True
+        pregunta.esMultipleResp = True
+        pregunta.marca_id = self.marca.id
+        pregunta.save()
+        opcion = Opcionmultiple();
+        opcion.esCorrecta = True
+        opcion.opcion = "opcion 1"
+        opcion.preguntaSeleccionMultiple = pregunta;
+        opcion.save()
+        preguntaJson = {
+            "enunciado": "¿Cuál es el número ganador?",
+            "esMultipleResp": False,
+            "marca": {"nombre": self.marca.nombre,
+                      "punto": self.marca.punto,
+                      "marca_id": self.marca.id,
+                      "tipoActividad": 0,
+                      "contenido": self.marca.contenido_id},
+            "marca_id": self.marca.id,
+            "nombre": "test",
+            "numeroDeIntentos": 1,
+            "seleccion_multiple_id": pregunta.id,
+            "tieneRetroalimentacion": False,
+            "opciones":[
+                {"opcion_id": opcion.id, "opcion": "1", "esCorrecta": True}]
+        }
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.tokenEstudiante.key)
+        response = self.client.put(self.url, data=preguntaJson, format='json')
+
+        self.assertEqual(response.status_code, 403)
 
 class RespuestaPreguntaAbiertaTestCase(TestCase):
 
