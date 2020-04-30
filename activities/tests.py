@@ -6,7 +6,7 @@ from rest_framework.utils import json
 from rest_framework.test import APIClient
 
 from interactive_content.models import ContenidoInteractivo, Contenido, Curso, Grupo
-from activities.models import Marca, PreguntaOpcionMultiple, Opcionmultiple, Calificacion, Pausa,\
+from activities.models import Marca, PreguntaOpcionMultiple, Opcionmultiple, Calificacion, Pausa, \
     PreguntaAbierta, PreguntaFoV
 
 from users.models import Profesor, Estudiante
@@ -332,40 +332,47 @@ class PauseTestCase(TestCase):
         url = '/activities/pausas/' + str(marca2.pk) + '/'
         response = self.client.get(url, formal='json')
         current_data = json.loads(response.content)
-
-        self.assertEqual(len(current_data), 1)
+        self.assertEqual(len(current_data['results']), 1)
 
     def test_pause_creation_by_profesor(self):
         marca = escenario()
         url = '/activities/create-pausa/'
-        actividad_dict = dict(nombre='prueba 1',
-                              numeroDeIntentos=1,
-                              tieneRetroalimentacion=True,
-                              marca_id=marca.id,
-                              retroalimentacion='',
-                              enunciado='Este es el enunciado de la pausa',
-                              tiempo=5.0
-                              )
-        response = self.client.post(url, actividad_dict, format='json',
-                                    HTTP_AUTHORIZATION='Token ' + self.token.key)
+        response = self.client.put(url, {'enunciado': "Este es el enunciado de la pausa",
+                                         'marca': {'nombre': 'prueba 1', 'punto': marca.punto, 'contenido_id': marca.contenido.id},
+                                         'nombre': 'prueba 1',
+                                         'tiempo': 5.0}, format='json',
+                                   HTTP_AUTHORIZATION='Token ' + self.token.key)
         self.assertEqual(response.status_code, 201)
         current_data = json.loads(response.content)
         self.assertEqual(current_data['nombre'], 'prueba 1')
+        return current_data['id']
 
+    def test_pause_edit_by_profesor(self):
+        pausa_id = self.test_pause_creation_by_profesor()
+        marca = Marca.objects.filter(nombre='prueba 1').first()
+        url = '/activities/create-pausa/'
+        response = self.client.put(url, {'enunciado': "Este es el enunciado de la pausa Actualizado",
+                                         'marca': {'nombre': marca.nombre, 'punto': marca.punto, 'contenido_id': marca.contenido.id},
+                                         'nombre': marca.nombre + ' Actualizada',
+                                         'tiempo': 2.0,
+                                         'marca_id': marca.id,
+                                         'pausa_id': pausa_id
+                                         }, format='json',
+                                   HTTP_AUTHORIZATION='Token ' + self.token.key)
+        self.assertEqual(response.status_code, 201)
+        current_data = json.loads(response.content)
+        marca2 = Marca.objects.get(pk=current_data['marca'])
+        self.assertEqual(marca2.nombre, marca.nombre + ' Actualizada')
+        self.assertEqual(current_data['id'], pausa_id)
 
     def test_pause_creation_by_estudiante(self):
         marca = escenario()
-        url = '/activities/create-pausa/' 
-        actividad_dict = dict(nombre='prueba 1',
-                              numeroDeIntentos=1,
-                              tieneRetroalimentacion=True,
-                              marca=marca.id,
-                              retroalimentacion='',
-                              enunciado='Este es el enunciado de la pausa',
-                              tiempo=5.0
-                              )
-        response = self.client.post(url, actividad_dict, format='json',
-                                    HTTP_AUTHORIZATION='Token ' + self.token_estudiante.key)
+        url = '/activities/create-pausa/'
+        response = self.client.put(url, {'enunciado': "Este es el enunciado de la pausa",
+                                         'marca': {'nombre': marca.nombre, 'punto': marca.punto, 'contenido_id': marca.contenido.id},
+                                         'nombre': "prueba 1",
+                                         'tiempo': 5.0}, format='json',
+                                   HTTP_AUTHORIZATION='Token ' + self.token_estudiante.key)
         current_data = json.loads(response.content)
         self.assertEqual(current_data['detail'], 'You do not have permission to perform this action.')
         self.assertEqual(response.status_code, 403)
