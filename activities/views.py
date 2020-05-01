@@ -1,31 +1,27 @@
-from itertools import count
-
+from django import db
+from django.http import HttpResponseNotFound, JsonResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.generics import GenericAPIView, ListCreateAPIView
-from rest_framework.mixins import ListModelMixin, CreateModelMixin
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
-from django.http import HttpResponseNotFound, JsonResponse
-from django.shortcuts import get_object_or_404
-
+from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
+    PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
+from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
+    RespuestaSeleccionMultipleSerializer, MarcaSerializer, PreguntaFoVSerializer, PausaSerializer, \
+    PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, \
+    MarcaConTipoActividadSerializer, ActividadPreguntaSerializer, ContenidoInteractivoRetroalimentacionSerializer
+from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
-from interactive_content.models import ContenidoInteractivo, Curso, Grupo
-
-from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
-    RespuestaSeleccionMultipleSerializer, MarcaSerializer, \
-    PreguntaFoVSerializer, PausaSerializer, PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, \
-    RespuestaFoVSerializer, MarcaConTipoActividadSerializer
-from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, \
-    Opcionmultiple, PreguntaOpcionMultiple, PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, \
-    RespuestaAbiertaEstudiante
 
 
-# Create your views here.
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -74,7 +70,7 @@ def reports(request, contentpk):
         for pregunta in preguntas_vof:
             if isinstance(pregunta, PreguntaFoV):
                 big_json['marcas'][-1]['preguntas'].append({'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
-                                                            'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
+                     'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
                 howManyTrue = RespuestaVoF.objects.filter(
                     preguntaVoF=pregunta, esVerdadero=True).count()  # "howTrue":value
                 howManyFalse = RespuestaVoF.objects.filter(
@@ -111,6 +107,14 @@ class MarcaView(ListModelMixin, CreateModelMixin, GenericAPIView):
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+    def put(self, request, *args, **kwargs):
+        marca_id = self.request.data.get('marca_id')
+        marca = get_object_or_404(Marca, id =marca_id)
+        marca.nombre = self.request.data.get('nombre')
+        marca.punto = self.request.data.get('punto')
+        marca.save()
+        return Response(data=MarcaSerializer(marca).data)
+
 
 def createOrGetMarca(question_data):
     marca_id = question_data.pop('marca_id', None)
@@ -125,25 +129,105 @@ def createOrGetMarca(question_data):
     return marca
 
 
-class CreatePreguntaAbierta(APIView):
-    def post(self, request, *args, **kwargs):
+class CreatePreguntaAbierta(RetrieveUpdateAPIView):
+    queryset = PreguntaAbierta.objects.all()
+    serializer_class = PreguntaAbiertaSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = [IsAuthenticated, IsProfesor]
+
+    def put(self, request, *args, **kwargs):
         question_data = request.data
+
+        try:
+            marca_id = question_data.get('marca_id')
+        except:
+            marca_id = None
+
+        try:
+            abierta_id = question_data.get('abierta_id')
+        except:
+            abierta_id = None
+
+        if question_data.get('numeroDeIntentos') is None:
+            question_data['numeroDeIntentos'] = 1
+
         marca = createOrGetMarca(question_data)
-        question = PreguntaAbierta.objects.create(marca=marca, **question_data)
-        return Response(data=PreguntaAbiertaSerializer(question).data)
+
+        if marca_id is None:
+            question = PreguntaAbierta.objects.create(marca=marca, **question_data)
+        else:
+            question = PreguntaAbierta.objects.get(id=abierta_id)
+            question.nombre = question_data['nombre']
+            question.enunciado = question_data['enunciado']
+            question.save()
+        return Response(data=PreguntaAbiertaSerializer(question).data, status=status.HTTP_201_CREATED)
 
 
-class CreatePreguntaSeleccionMultiple(APIView):
-    def post(self, request, *args, **kwargs):
+
+def index_of(val, in_list):
+    try:
+        return in_list.index(val)
+    except ValueError:
+        return -1
+
+
+class CreatePreguntaSeleccionMultiple(RetrieveUpdateAPIView):
+    queryset = PreguntaOpcionMultiple.objects.all()
+    serializer_class = PreguntaOpcionMultipleSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = [IsAuthenticated, IsProfesor]
+
+    def put(self, request, *args, **kwargs):
         question_data = request.data
+        try:
+            marca_id = question_data.get('marca_id')
+        except:
+            marca_id = None
+
+        try:
+            seleccion_multiple_id = question_data.get('seleccion_multiple_id')
+        except:
+            seleccion_multiple_id = None
+
         marca = createOrGetMarca(question_data)
-        options = question_data.pop('opciones')
-        question = PreguntaOpcionMultiple.objects.create(
-            marca=marca, **question_data)
-        for option in options:
-            Opcionmultiple.objects.create(
-                preguntaSeleccionMultiple=question, **option)
-        return Response(data=PreguntaOpcionMultipleSerializer(question).data)
+
+        if marca_id is None:
+            options = question_data.pop('opciones')
+            question = PreguntaOpcionMultiple.objects.create(
+                marca=marca, **question_data)
+            for option in options:
+                Opcionmultiple.objects.create(
+                    preguntaSeleccionMultiple=question, **option)
+        else:
+            question = PreguntaOpcionMultiple.objects.get(id=seleccion_multiple_id)
+            question.enunciado = question_data['enunciado']
+            question.esMultipleResp = question_data['esMultipleResp']
+            question.nombre = question_data['nombre']
+            question.tieneRetroalimentacion = question_data['tieneRetroalimentacion']
+            question.numeroDeIntentos = question_data['numeroDeIntentos']
+            question.save()
+            options = question_data.get('opciones')
+            listOption = [o.get('opcion_id') for o in options]
+            #validar eliminados
+            options_ = Opcionmultiple.objects.filter(preguntaSeleccionMultiple_id=seleccion_multiple_id);
+            for option in options_:
+                if index_of(option.id, listOption) == -1:
+                 option.delete()
+            for option in options:
+                try:
+                    option_id = option.get('opcion_id')
+                except:
+                    option_id = None
+                if option_id is None:
+                    Opcionmultiple.objects.create(
+                        preguntaSeleccionMultiple=question, **option)
+                else:
+                    option_ = Opcionmultiple.objects.get(id=option_id);
+                    option_.esCorrecta = option.get('esCorrecta')
+                    option_.opcion = option.get('opcion')
+                    option_.save()
+
+        return Response(data=PreguntaOpcionMultipleSerializer(question).data, status=status.HTTP_201_CREATED)
 
 
 class PreguntaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
@@ -307,6 +391,7 @@ class CalificarAPI(ListCreateAPIView):
 
 
 class MarcaApi(ListModelMixin, GenericAPIView):
+    pagination_class = None
 
     def get_serializer_class(self):
         contenido = self.request.query_params.get('contenido', None)
@@ -314,19 +399,22 @@ class MarcaApi(ListModelMixin, GenericAPIView):
             return MarcaConTipoActividadSerializer
         return MarcaSerializer
 
-    def get_queryset(self):
-        content = self.request.query_params.get('contenido', None)
-        marca = self.request.query_params.get('marca', None)
-        if content is not None:
-            response = Actividad.objects.filter(marca__contenido=content).select_related('marca')
-            return response
-        elif marca is not None:
-            return Marca.objects.filter(pk=marca)
-        else:
-            return Marca.objects.all()
-
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, *kwargs)
+        try:
+            content = self.request.query_params.get('contenido', None)
+            marca = self.request.query_params.get('marca', None)
+            if content is not None:
+                data = retrieve_mark_information(content)
+                return JsonResponse(data, status=status.HTTP_200_OK, safe=False)
+            elif marca is not None:
+                return JsonResponse(MarcaSerializer(Marca.objects.filter(pk=marca), many=True).data,
+                                    status=status.HTTP_200_OK, safe=False)
+            else:
+                return JsonResponse(MarcaSerializer(Marca.objects.all(), many=True).data, status=status.HTTP_200_OK,
+                                    safe=False)
+        except Exception as e:
+            return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
+
 
 
 def intentos_max(request):
@@ -390,16 +478,36 @@ def validate_resps(resps):
     return max_int
 
 
-class PausaDetail(ListCreateAPIView):
+class PausaDetail(RetrieveUpdateAPIView):
     queryset = Pausa.objects.all()
     serializer_class = PausaSerializer
-    authentication_classes = (TokenAuthentication, )
+    authentication_classes = (TokenAuthentication,)
     permission_classes = [IsAuthenticated, IsProfesor]
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         question_data = request.data
+        marca_id = None
+        pausa_id = None
+        try:
+            marca_id = question_data.get('marca_id')
+        except:
+            marca_id = None
+
+        try:
+            pausa_id = question_data.pop('pausa_id', None)
+        except:
+            pausa_id = None
         marca = createOrGetMarca(question_data)
-        question = Pausa.objects.create(marca=marca, **question_data)
+        if marca_id is None:
+            question = Pausa.objects.create(marca=marca, **question_data)
+        else:
+            marca.nombre = question_data['nombre']
+            marca.save()
+            question = Pausa.objects.get(id=pausa_id)
+            question.tiempo = question_data['tiempo']
+            question.enunciado = question_data['enunciado']
+            question.save()
+
         return Response(data=PausaSerializer(question).data, status=status.HTTP_201_CREATED)
 
 
@@ -434,7 +542,7 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
             print('xxxx', pregunta1)
             pregunta = pregunta1[0]
 
-           # pregunta = pregunta1[0].preguntaSeleccionMultiple
+            # pregunta = pregunta1[0].preguntaSeleccionMultiple
             # valida si el intento de la respuesta es menor o igual al max de intentos permitidos
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
@@ -455,7 +563,6 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
 
 class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView):
-
     queryset = RespuestaVoF.objects.all()
     # clase serializer para la transformacion de datos del request
     serializer_class = RespuestaFoVSerializer
@@ -550,3 +657,52 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                 return Response(self.serializer_class(respuestaFoV).data, status=status.HTTP_200_OK)
         else:
             return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def retrieve_mark_information(contenido):
+    cursor = db.connection.cursor()
+    ## TODO Hay un problema en este query y no se puede calcular el numero de intentos de la respuesta con opción multiple, porque el objeto de respuesta de opcion multiple no tiene asociada la pregunta a la cual le corresponde
+    with open('activities/getInformacionMarca.sql', 'r') as file:
+        query = file.read().replace('\n', ' ').replace('\t', ' ')
+        cursor.execute(query, (contenido, contenido, contenido, contenido))
+        return dictfetchall(cursor)
+
+
+def dictfetchall(cursor):
+    "Return all rows from a cursor as a dict."
+    rows = cursor.fetchall()
+    result = []
+    keys = ('id','marca_id','tipoActividad','punto','nombre','contenido_id','numIntentos')
+    for row in rows:
+        result.append(dict(zip(keys, row)))
+    return result
+
+
+class PreguntaVoFModificacionViewSet(GenericViewSet, UpdateModelMixin):
+    queryset = PreguntaFoV.objects.all()
+    serializer_class = PreguntaFoVSerializer
+    http_method_names = ['patch']
+
+class GetRetroalimentacion(ListModelMixin, GenericAPIView):
+    serializer_class = ContenidoInteractivoRetroalimentacionSerializer
+    lookup_url_kwarg = "id"
+
+    def get_queryset(self):
+        id = self.kwargs.get(self.lookup_url_kwarg)
+        # interactive_content = ContenidoInteractivo.objects.get(id=id)
+
+        return ContenidoInteractivo.objects.filter(id=id)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, *kwargs)
+
+class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
+    serializer_class = ActividadPreguntaSerializer
+    lookup_url_kwarg = "id"
+
+    def get_queryset(self):
+        marca = self.kwargs.get(self.lookup_url_kwarg)
+        return Actividad.objects.filter(id=marca,tieneRetroalimentacion=True)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, *kwargs)
