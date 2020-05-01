@@ -412,7 +412,7 @@ class MarcaApi(ListModelMixin, GenericAPIView):
             else:
                 return JsonResponse(MarcaSerializer(Marca.objects.all(), many=True).data, status=status.HTTP_200_OK,
                                     safe=False)
-        except:
+        except Exception as e:
             return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
 
 
@@ -664,7 +664,7 @@ def retrieve_mark_information(contenido):
     ## TODO Hay un problema en este query y no se puede calcular el numero de intentos de la respuesta con opción multiple, porque el objeto de respuesta de opcion multiple no tiene asociada la pregunta a la cual le corresponde
     with open('activities/getInformacionMarca.sql', 'r') as file:
         query = file.read().replace('\n', ' ').replace('\t', ' ')
-        cursor.execute(query, (contenido, contenido))
+        cursor.execute(query, (contenido, contenido, contenido, contenido))
         return dictfetchall(cursor)
 
 

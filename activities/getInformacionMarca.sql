@@ -49,3 +49,53 @@ group by
 	marca.nombre,
 	marca.contenido_id,
 	actividad."numeroDeIntentos"
+union 
+select
+	distinct actividad.id,
+	actividad.marca_id,
+	actividad."tipoActividad",
+	marca.punto,
+	marca.nombre,
+	marca.contenido_id,
+	actividad."numeroDeIntentos" as numIntentos
+from
+	activities_actividad actividad
+inner join activities_marca marca on
+	marca.id = actividad.marca_id
+inner join activities_pausa pa on pa.actividad_ptr_id = actividad.id
+where
+	marca.contenido_id = %s
+group by
+	actividad.id,
+	marca.punto,
+	actividad.marca_id,
+	actividad."tipoActividad",
+	marca.punto,
+	marca.nombre,
+	marca.contenido_id,
+	actividad."numeroDeIntentos"
+union 
+select
+	distinct actividad.id,
+	actividad.marca_id,
+	actividad."tipoActividad",
+	marca.punto,
+	marca.nombre,
+	marca.contenido_id,
+	actividad."numeroDeIntentos" as numIntentos
+from
+	activities_actividad actividad
+inner join activities_marca marca on
+	marca.id = actividad.marca_id
+inner join activities_preguntaopcionmultiple pom on pom.actividad_ptr_id = actividad.id
+where
+	marca.contenido_id = %s
+group by
+	actividad.id,
+	marca.punto,
+	actividad.marca_id,
+	actividad."tipoActividad",
+	marca.punto,
+	marca.nombre,
+	marca.contenido_id,
+	actividad."numeroDeIntentos"
