@@ -98,8 +98,6 @@ class ActividadPreguntaSerializer(serializers.ModelSerializer):
         fields = ["id", "retroalimentacion"]
 
 class MarcaSerializerRetroalimentacion(serializers.ModelSerializer):
-    # actividad = ActividadPreguntaSerializer(many=True)
-    # print(actividad)
     actividades = serializers.SerializerMethodField('get_act')
 
     def get_act(self, marca):
