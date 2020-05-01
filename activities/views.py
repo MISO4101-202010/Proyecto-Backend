@@ -1,3 +1,4 @@
+from django import db
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status, generics
@@ -397,19 +398,22 @@ class MarcaApi(ListModelMixin, GenericAPIView):
             return MarcaConTipoActividadSerializer
         return MarcaSerializer
 
-    def get_queryset(self):
-        content = self.request.query_params.get('contenido', None)
-        marca = self.request.query_params.get('marca', None)
-        if content is not None:
-            response = Actividad.objects.filter(marca__contenido=content).select_related('marca')
-            return response
-        elif marca is not None:
-            return Marca.objects.filter(pk=marca)
-        else:
-            return Marca.objects.all()
-
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, *kwargs)
+        try:
+            content = self.request.query_params.get('contenido', None)
+            marca = self.request.query_params.get('marca', None)
+            if content is not None:
+                data = retrieve_mark_information(content)
+                return JsonResponse(data, status=status.HTTP_200_OK, safe=False)
+            elif marca is not None:
+                return JsonResponse(MarcaSerializer(Marca.objects.filter(pk=marca), many=True).data,
+                                    status=status.HTTP_200_OK, safe=False)
+            else:
+                return JsonResponse(MarcaSerializer(Marca.objects.all(), many=True).data, status=status.HTTP_200_OK,
+                                    safe=False)
+        except:
+            return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
+
 
 
 def intentos_max(request):
@@ -653,6 +657,24 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
         else:
             return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
 
+
+def retrieve_mark_information(contenido):
+    cursor = db.connection.cursor()
+    ## TODO Hay un problema en este query y no se puede calcular el numero de intentos de la respuesta con opción multiple, porque el objeto de respuesta de opcion multiple no tiene asociada la pregunta a la cual le corresponde
+    with open('activities/getInformacionMarca.sql', 'r') as file:
+        query = file.read().replace('\n', ' ').replace('\t', ' ')
+        cursor.execute(query, (contenido, contenido))
+        return dictfetchall(cursor)
+
+
+def dictfetchall(cursor):
+    "Return all rows from a cursor as a dict."
+    rows = cursor.fetchall()
+    result = []
+    keys = ('id','marca_id','tipoActividad','punto','nombre','contenido_id','numIntentos')
+    for row in rows:
+        result.append(dict(zip(keys, row)))
+    return result
 
 
 class PreguntaVoFModificacionViewSet(GenericViewSet, UpdateModelMixin):
