@@ -1,3 +1,4 @@
+from django import db
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status, generics
@@ -14,8 +15,9 @@ from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, O
     PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
 from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
     RespuestaSeleccionMultipleSerializer, MarcaSerializer, PreguntaFoVSerializer, PausaSerializer, \
-    PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, MarcaConTipoActividadSerializer
-from interactive_content.models import ContenidoInteractivo, Grupo
+    PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, \
+    MarcaConTipoActividadSerializer, ActividadPreguntaSerializer, ContenidoInteractivoRetroalimentacionSerializer
+from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
 
@@ -397,19 +399,22 @@ class MarcaApi(ListModelMixin, GenericAPIView):
             return MarcaConTipoActividadSerializer
         return MarcaSerializer
 
-    def get_queryset(self):
-        content = self.request.query_params.get('contenido', None)
-        marca = self.request.query_params.get('marca', None)
-        if content is not None:
-            response = Actividad.objects.filter(marca__contenido=content).select_related('marca')
-            return response
-        elif marca is not None:
-            return Marca.objects.filter(pk=marca)
-        else:
-            return Marca.objects.all()
-
     def get(self, request, *args, **kwargs):
-        return self.list(request, *args, *kwargs)
+        try:
+            content = self.request.query_params.get('contenido', None)
+            marca = self.request.query_params.get('marca', None)
+            if content is not None:
+                data = retrieve_mark_information(content)
+                return JsonResponse(data, status=status.HTTP_200_OK, safe=False)
+            elif marca is not None:
+                return JsonResponse(MarcaSerializer(Marca.objects.filter(pk=marca), many=True).data,
+                                    status=status.HTTP_200_OK, safe=False)
+            else:
+                return JsonResponse(MarcaSerializer(Marca.objects.all(), many=True).data, status=status.HTTP_200_OK,
+                                    safe=False)
+        except Exception as e:
+            return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
+
 
 
 def intentos_max(request):
@@ -654,8 +659,50 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
             return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def retrieve_mark_information(contenido):
+    cursor = db.connection.cursor()
+    ## TODO Hay un problema en este query y no se puede calcular el numero de intentos de la respuesta con opción multiple, porque el objeto de respuesta de opcion multiple no tiene asociada la pregunta a la cual le corresponde
+    with open('activities/getInformacionMarca.sql', 'r') as file:
+        query = file.read().replace('\n', ' ').replace('\t', ' ')
+        cursor.execute(query, (contenido, contenido, contenido, contenido))
+        return dictfetchall(cursor)
+
+
+def dictfetchall(cursor):
+    "Return all rows from a cursor as a dict."
+    rows = cursor.fetchall()
+    result = []
+    keys = ('id','marca_id','tipoActividad','punto','nombre','contenido_id','numIntentos')
+    for row in rows:
+        result.append(dict(zip(keys, row)))
+    return result
+
 
 class PreguntaVoFModificacionViewSet(GenericViewSet, UpdateModelMixin):
     queryset = PreguntaFoV.objects.all()
     serializer_class = PreguntaFoVSerializer
     http_method_names = ['patch']
+
+class GetRetroalimentacion(ListModelMixin, GenericAPIView):
+    serializer_class = ContenidoInteractivoRetroalimentacionSerializer
+    lookup_url_kwarg = "id"
+
+    def get_queryset(self):
+        id = self.kwargs.get(self.lookup_url_kwarg)
+        # interactive_content = ContenidoInteractivo.objects.get(id=id)
+
+        return ContenidoInteractivo.objects.filter(id=id)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, *kwargs)
+
+class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
+    serializer_class = ActividadPreguntaSerializer
+    lookup_url_kwarg = "id"
+
+    def get_queryset(self):
+        marca = self.kwargs.get(self.lookup_url_kwarg)
+        return Actividad.objects.filter(id=marca,tieneRetroalimentacion=True)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, *kwargs)

@@ -240,7 +240,7 @@ def escenario3():
                                                 )
     contenidoInteractivo.save()
     contenidoInteractivo.curso.add(curso)
-    
+
     marca = Marca(nombre="marca1",
                   punto=33,
                   contenido=contenidoInteractivo,
@@ -827,3 +827,85 @@ class MarcaTestCases (TestCase):
         new_marca = {"marca_id": 99999999, "nombre": "marca2", "punto": 30}
         response = self.client.put(url, new_marca, content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+#Prueba de retorno de retroalimentaacion
+class TestPreguntaRetroalimentacionTestCase(TestCase):
+
+    def test_create_question_true(self):
+        self.client = APIClient()
+        marca = escenario()
+        url = "/activities/pregunta_f_v"
+        pregunta = {
+            "nombre": "test",
+            "numeroDeIntentos": "1",
+            "tieneRetroalimentacion": True,
+            "retroalimentacion": "Si",
+            "pregunta": "¿PHP es más rapido procesando operaciones matematicas que Python?",
+            "esVerdadero": True,
+            "marca": marca.pk
+        }
+        response = self.client.post(url, data=pregunta, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'],True)
+        #Retorna la retroalimentación
+
+        url = "/activities/retroalimentacion/pregunta/" + str(json.loads(response.content)['id']) + "/"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content)['count'], 1)
+
+
+
+    def test_create_question_false(self):
+        self.client = APIClient()
+        marca = escenario()
+        url = "/activities/pregunta_f_v"
+        pregunta = {
+            "nombre": "test",
+            "numeroDeIntentos": "1",
+            "tieneRetroalimentacion": False,
+            "retroalimentacion": "Al parecer, no",
+            "pregunta": "¿Es el mundo una simulación?",
+            "esVerdadero": False,
+            "marca": marca.pk
+        }
+        response = self.client.post(url, data=pregunta, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'],False)
+        #Retorna la retroalimentación
+
+        url = "/activities/retroalimentacion/pregunta/" + str(json.loads(response.content)['id']) + "/"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content)['count'], 0)
+
+    def test_list_on_contenido(self):
+        self.client = APIClient()
+        marca = escenario()
+        url = "/activities/pregunta_f_v"
+        pregunta = {
+            "nombre": "test1",
+            "numeroDeIntentos": "1",
+            "tieneRetroalimentacion": True,
+            "retroalimentacion": "Si, con el módulo threading",
+            "pregunta": "¿Python puede usaar hilos?",
+            "esVerdadero": True,
+            "marca": marca.pk
+        }
+        response = self.client.post(url, data=pregunta, format='json')
+        url = "/activities/pregunta_f_v"
+        pregunta = {
+            "nombre": "test2",
+            "numeroDeIntentos": "1",
+            "tieneRetroalimentacion": False,
+            "retroalimentacion": "Si, con propósito general",
+            "pregunta": "¿Python es scripting?",
+            "esVerdadero": True,
+            "marca": marca.pk
+        }
+        response = self.client.post(url, data=pregunta, format='json')
+        #Retorna la retroalimentación
+        url = "/activities/retroalimentacion/" + str(marca.contenido.pk) + "/"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(json.loads(response.content)['results'][0]['marcas'][0]['actividades']), 2)

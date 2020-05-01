@@ -4,6 +4,7 @@ from rest_framework.fields import SerializerMethodField, IntegerField, CharField
 from activities.models import PreguntaOpcionMultiple, RespuestmultipleEstudiante, Opcionmultiple, Calificacion, Marca, \
     PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, RespuestaVoF, Actividad
 
+from interactive_content.models import ContenidoInteractivo
 
 class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -81,7 +82,6 @@ class PreguntaAbiertaSerializer(serializers.ModelSerializer):
         model = PreguntaAbierta
         fields = '__all__'
 
-
 class MarcaConTipoActividadSerializer(serializers.ModelSerializer):
     marca_id = IntegerField(source="marca.id")
     nombre = CharField(source="marca.nombre")
@@ -91,3 +91,26 @@ class MarcaConTipoActividadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Actividad
         fields = ["tipoActividad", "marca_id", "nombre", "punto", "contenido"]
+
+class ActividadPreguntaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Actividad
+        fields = ["id", "retroalimentacion"]
+
+class MarcaSerializerRetroalimentacion(serializers.ModelSerializer):
+    actividades = serializers.SerializerMethodField('get_act')
+
+    def get_act(self, marca):
+        qs = Actividad.objects.filter(marca=marca)
+        serializer = ActividadPreguntaSerializer(instance=qs, many=True)
+        return serializer.data
+    class Meta:
+        model = Marca
+        fields = ["id", "actividades"]
+
+class ContenidoInteractivoRetroalimentacionSerializer(serializers.ModelSerializer):
+    marcas = MarcaSerializerRetroalimentacion(read_only=True, many=True)
+
+    class Meta:
+        model = ContenidoInteractivo
+        fields = fields = ["id", "marcas"]

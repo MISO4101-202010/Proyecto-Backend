@@ -5,7 +5,7 @@ from activities.views import CalificarAPI, MarcaApi, intentos_max, GetPausesView
     MarcaView, reports, RespuestaSeleccionMultipleView, CreatePreguntaSeleccionMultiple, PausaDetail, \
     CreatePreguntaAbierta, DetailPreguntaSeleccionMultiple, \
     tipo_actividad, PreguntaFoVGetOne, PreguntaFoVView, \
-    RespuestaFoVView, RespuestaAbiertaView, DetailPreguntaAbierta, PreguntaVoFModificacionViewSet
+    RespuestaFoVView, RespuestaAbiertaView, DetailPreguntaAbierta, PreguntaVoFModificacionViewSet ,GetRetroalimentacion, GetRetroalimentacionPregunta
 
 app_name = 'activities'
 # add url path to the API
@@ -34,5 +34,7 @@ urlpatterns = [
     path('pregunta_abierta/<int:marca>/', GetPreguntaAbierta.as_view(), name="pregunta abierta"),
     path('create-pausa/', PausaDetail.as_view(), name="create pauses"),
     path('tipo_actividad', tipo_actividad),
+    path('retroalimentacion/<int:id>/', GetRetroalimentacion.as_view()),
+    path('retroalimentacion/pregunta/<int:id>/', GetRetroalimentacionPregunta.as_view()),
     path('', include(router.urls)),
 ]
