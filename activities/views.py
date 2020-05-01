@@ -668,7 +668,7 @@ def retrieve_mark_information(contenido):
 
 
 def dictfetchall(cursor):
-    "Return all rows from a cursor as a dict"
+    "Return all rows from a cursor as a dict."
     rows = cursor.fetchall()
     result = []
     keys = ('id','marca_id','tipoActividad','punto','nombre','contenido_id','numIntentos')
