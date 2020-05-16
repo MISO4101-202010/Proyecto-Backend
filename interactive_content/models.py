@@ -29,6 +29,7 @@ class ContenidoInteractivo(models.Model):
     fecha_creacion = models.DateTimeField(null=False, auto_now_add=True)
     tiempo_disponibilidad = models.DateTimeField(null=True, blank=True)
     tiene_retroalimentacion = models.BooleanField(null=True, blank=True)
+    es_calificable = models.BooleanField(null=False, default=False)
     curso = models.ManyToManyField(Curso)
     puedeSaltar = models.BooleanField(default=False)
 
