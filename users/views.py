@@ -33,13 +33,17 @@ class ObtainAuthToken(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         user_with_roll = user.get_real_instance()
-        if user_with_roll.__class__.__name__  == 'Profesor':
+        role = ""
+        if user_with_roll.__class__.__name__ == 'Profesor':
             user_serialized = ProfesorSerializer(user_with_roll).data
+            role = "profesor"
         else:
             user_serialized = EstudianteSerializer(user_with_roll).data
+            role = "alumno"
         token, created = Token.objects.get_or_create(user=user)
         user_logged_in.send(sender=user.__class__, request=request, user=user)
         return Response(data={
             'user': user_serialized,
+            'role': role,
             'token': token.key
         }, status=HTTP_200_OK)
