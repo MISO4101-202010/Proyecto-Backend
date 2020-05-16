@@ -43,6 +43,29 @@ class CreateInteractiveContentTestCase(TestCase):
         self.assertEqual(current_data['message'], 'Unauthorized')
         self.assertEqual(response.status_code, 401)
 
+class GetInteractiveContentNowTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = Profesor.objects.create_superuser('admin', 'admin@admin.com', 'admin123')
+        self.token = Token.objects.create(user=self.user)
+        self.url = '/content/interactivecontent/{}'
+        self.headers = {'Content-Type': 'application/json'}
+    def test_true_interactive_content(self):
+        url = '/content/cont_interactivo'
+        self.client.force_login(user=self.user)
+        contenido = Contenido.objects.create(url="test", nombre="contenido test", profesor_id=self.user.id)
+        interactive_content = {"nombre": "test", "contenido": contenido.id, "tiene_retroalimentacion": True}
+        response = self.client.post(url, interactive_content, format='json', HTTP_AUTHORIZATION='Token ' + self.token.key)
+        current_data = json.loads(response.content)
+        self.assertEqual(current_data['tiene_retroalimentacion'], True)
+    def test_false_interactive_content(self):
+        url = '/content/cont_interactivo'
+        self.client.force_login(user=self.user)
+        contenido = Contenido.objects.create(url="test", nombre="contenido test", profesor_id=self.user.id)
+        interactive_content = {"nombre": "test", "contenido": contenido.id, "tiene_retroalimentacion": False}
+        response = self.client.post(url, interactive_content, format='json', HTTP_AUTHORIZATION='Token ' + self.token.key)
+        current_data = json.loads(response.content)
+        self.assertEqual(current_data['tiene_retroalimentacion'], False)
 
 class InteractiveContentTestCase(TestCase):
 
@@ -57,12 +80,13 @@ class InteractiveContentTestCase(TestCase):
         url = '/content/cont_interactivo'
         self.client.force_login(user=self.user)
         contenido = Contenido.objects.create(url="test.com", nombre="contenido test", profesor_id=self.user.id)
-        interactive_content = {"nombre": "test", "contenido": contenido.id}
+        interactive_content = {"nombre": "test", "contenido": contenido.id, "tiene_retroalimentacion": True}
         response = self.client.post(url, interactive_content, format='json',
                                     HTTP_AUTHORIZATION='Token ' + self.token.key)
         current_data = json.loads(response.content)
         self.assertEqual(current_data['nombre'], 'test')
         self.assertEqual(current_data['contenido']['id'], contenido.id)
+        self.assertEqual(current_data['tiene_retroalimentacion'], interactive_content['tiene_retroalimentacion'])
 
     def test_unauthorized_user(self):
         url = '/content/cont_interactivo'
@@ -149,7 +173,7 @@ class InteractiveContentTestCase(TestCase):
         token, created = Token.objects.get_or_create(user=student)
         student_token = token.key if created else ''
 
-        response = self.client.get('/content/mycourses', format='json', headers=self.headers, HTTP_AUTHORIZATION='Token ' + student_token)
+        response = self.client.get('/content/mycourses/', format='json', headers=self.headers, HTTP_AUTHORIZATION='Token ' + student_token)
 
         data = json.loads(response.content)
 
