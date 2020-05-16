@@ -661,8 +661,7 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
 def retrieve_mark_information(contenido):
     cursor = db.connection.cursor()
-    ## TODO Hay un problema en este query y no se puede calcular el numero de intentos de la respuesta con opción multiple, porque el objeto de respuesta de opcion multiple no tiene asociada la pregunta a la cual le corresponde
-    with open('activities/getInformacionMarca.sql', 'r') as file:
+    with open('activities/raw_queries/getInformacionMarca.sql', 'r') as file:
         query = file.read().replace('\n', ' ').replace('\t', ' ')
         cursor.execute(query, (contenido, contenido, contenido, contenido))
         return dictfetchall(cursor)
