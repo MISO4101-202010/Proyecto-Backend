@@ -159,6 +159,8 @@ class CreatePreguntaAbierta(RetrieveUpdateAPIView):
             question = PreguntaAbierta.objects.get(id=abierta_id)
             question.nombre = question_data['nombre']
             question.enunciado = question_data['enunciado']
+            question.retroalimentacion = question_data['retroalimentacion']
+            question.tieneRetroalimentacion = question_data['tieneRetroalimentacion']
             question.save()
         return Response(data=PreguntaAbiertaSerializer(question).data, status=status.HTTP_201_CREATED)
 
