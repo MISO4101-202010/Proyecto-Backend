@@ -5,6 +5,7 @@ from activities.models import PreguntaOpcionMultiple, RespuestmultipleEstudiante
     PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, RespuestaVoF, Actividad
 
 from interactive_content.models import ContenidoInteractivo
+from .utils import get_total_qualifying_questions
 
 class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,6 +18,12 @@ class RespuestaAbiertaSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RespuestaFoVSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        total_qualifying_questions = get_total_qualifying_questions(obj)
+        return 5/total_qualifying_questions if total_qualifying_questions > 0 and obj.preguntaVoF.esVerdadero == obj.esVerdadero else 0
+
     class Meta:
         model = RespuestaVoF
         fields = '__all__'
