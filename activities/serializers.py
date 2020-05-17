@@ -22,7 +22,11 @@ class RespuestaFoVSerializer(serializers.ModelSerializer):
 
     def get_qualification(self, obj):
         total_qualifying_questions = get_total_qualifying_questions(obj)
-        return 5/total_qualifying_questions if total_qualifying_questions > 0 and obj.preguntaVoF.esVerdadero == obj.esVerdadero else 0
+        qualification = 5/total_qualifying_questions if total_qualifying_questions > 0 and obj.preguntaVoF.esVerdadero == obj.esVerdadero else 0
+        Calificacion.objects.update_or_create(
+            estudiante=obj.estudiante, actividad=obj.preguntaVoF, defaults={"calificacion": qualification}
+        )
+        return qualification
 
     class Meta:
         model = RespuestaVoF
