@@ -12,12 +12,30 @@ class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
         model = RespuestmultipleEstudiante
         fields = '__all__'
 
+class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        total_qualifying_questions = get_total_qualifying_questions(obj)
+        qualification_by_question = 5/total_qualifying_questions if total_qualifying_questions > 0 else 0
+        total_options_by_question = Opcionmultiple.objects.filter(PreguntaOpcionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple).count()
+        qualification = qualification_by_question/total_options_by_question if total_options_by_question > 0 and obj.respuestmultiple.esCorrecta() else 0
+        Calificacion.objects.update_or_create(
+            estudiante=obj.estudiante, actividad=obj.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": qualification}
+        )
+        return qualification
+
 class RespuestaAbiertaSerializer(serializers.ModelSerializer):
     class Meta:
         model = RespuestaAbiertaEstudiante
         fields = '__all__'
 
 class RespuestaFoVSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RespuestaVoF
+        fields = '__all__'
+
+class QualificationFoVResponseSerializer(RespuestaFoVSerializer):
     qualification = serializers.SerializerMethodField()
 
     def get_qualification(self, obj):

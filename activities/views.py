@@ -13,10 +13,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
     PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
-from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
-    RespuestaSeleccionMultipleSerializer, MarcaSerializer, PreguntaFoVSerializer, PausaSerializer, \
-    PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, \
-    MarcaConTipoActividadSerializer, ActividadPreguntaSerializer, ContenidoInteractivoRetroalimentacionSerializer
+from activities.serializers import ActividadPreguntaSerializer, CalificacionSerializer, ContenidoInteractivoRetroalimentacionSerializer, MarcaConTipoActividadSerializer, MarcaSerializer, PausaSerializer, PreguntaAbiertaSerializer, PreguntaFoVSerializer, PreguntaOpcionMultipleSerializer, QualificationFoVResponseSerializer, QualificationMultipleChoiceResponseSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, RespuestaSeleccionMultipleSerializer
 from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
@@ -339,6 +336,11 @@ class RespuestaSeleccionMultipleView(ListModelMixin, CreateModelMixin, GenericAP
     # clase serializer para la transformacion de datos del request
     serializer_class = RespuestaSeleccionMultipleSerializer
 
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return QualificationMultipleChoiceResponseSerializer
+        return self.serializer_class
+
     def perform_create(self, serializer):
         return serializer.save()
 
@@ -605,6 +607,11 @@ class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView)
 
 class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
     serializer_class = RespuestaFoVSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return QualificationFoVResponseSerializer
+        return self.serializer_class
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
