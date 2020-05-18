@@ -641,7 +641,7 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                     nueva_respuesta.estudiante = respuesta_previa.estudiante
                     nueva_respuesta.esVerdadero = respuesta_actual
                     nueva_respuesta.save()
-                    return Response(self.serializer_class(nueva_respuesta).data, status=status.HTTP_200_OK)
+                    return Response(self.get_serializer(nueva_respuesta).data, status=status.HTTP_200_OK)
                 else:
                     return Response(data={"Máximo número de intentos alcanzado"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -661,7 +661,7 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                 respuestaFoV.grupo = grupo
                 respuestaFoV.preguntaVoF = pregunta
                 respuestaFoV.save()
-                return Response(self.serializer_class(respuestaFoV).data, status=status.HTTP_200_OK)
+                return Response(self.get_serializer(respuestaFoV).data, status=status.HTTP_200_OK)
         else:
             return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
 

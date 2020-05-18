@@ -6,6 +6,7 @@ from activities.models import PreguntaOpcionMultiple, RespuestmultipleEstudiante
 
 from interactive_content.models import ContenidoInteractivo
 from .utils import get_total_qualifying_questions
+from decimal import Decimal
 
 class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,14 +17,16 @@ class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSe
     qualification = serializers.SerializerMethodField()
 
     def get_qualification(self, obj):
-        total_qualifying_questions = get_total_qualifying_questions(obj)
+        total_qualifying_questions = get_total_qualifying_questions(obj.respuestmultiple.preguntaSeleccionMultiple.marca.contenido)
         qualification_by_question = 5/total_qualifying_questions if total_qualifying_questions > 0 else 0
-        total_options_by_question = Opcionmultiple.objects.filter(PreguntaOpcionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple).count()
-        qualification = qualification_by_question/total_options_by_question if total_options_by_question > 0 and obj.respuestmultiple.esCorrecta() else 0
-        Calificacion.objects.update_or_create(
-            estudiante=obj.estudiante, actividad=obj.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": qualification}
+        total_correct_options_by_question = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=True).count()
+        note = qualification_by_question/total_correct_options_by_question if total_correct_options_by_question > 0 and obj.respuestmultiple.esCorrecta else 0
+        qualification, created = Calificacion.objects.get_or_create(
+            estudiante=obj.estudiante, actividad=obj.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": 0}
         )
-        return qualification
+        qualification.calificacion = note if created else qualification.calificacion + Decimal(note)
+        qualification.save()
+        return qualification.calificacion
 
 class RespuestaAbiertaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,12 +42,12 @@ class QualificationFoVResponseSerializer(RespuestaFoVSerializer):
     qualification = serializers.SerializerMethodField()
 
     def get_qualification(self, obj):
-        total_qualifying_questions = get_total_qualifying_questions(obj)
-        qualification = 5/total_qualifying_questions if total_qualifying_questions > 0 and obj.preguntaVoF.esVerdadero == obj.esVerdadero else 0
-        Calificacion.objects.update_or_create(
-            estudiante=obj.estudiante, actividad=obj.preguntaVoF, defaults={"calificacion": qualification}
+        total_qualifying_questions = get_total_qualifying_questions(obj.preguntaVoF.marca.contenido)
+        note = 5/total_qualifying_questions if total_qualifying_questions > 0 and obj.preguntaVoF.esVerdadero == obj.esVerdadero else 0
+        qualification, _ = Calificacion.objects.update_or_create(
+            estudiante=obj.estudiante, actividad=obj.preguntaVoF, defaults={"calificacion": note}
         )
-        return qualification
+        return qualification.calificacion
 
     class Meta:
         model = RespuestaVoF
