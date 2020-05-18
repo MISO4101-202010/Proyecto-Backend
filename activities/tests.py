@@ -644,7 +644,7 @@ class RespuestaSeleccionTestCase(TestCase):
                                           }
                                     )
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 400)
 
 
 class CalificacionCase(TestCase):
