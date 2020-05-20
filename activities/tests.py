@@ -855,7 +855,7 @@ class PreguntaRetroalimentacionTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content)['count'], 1)
 
-    def test_create_question_false(self): 
+    def test_create_question_false(self):
         self.pregunta["tieneRetroalimentacion"] = False
         response = self.client.post(self.url, data=self.pregunta, format='json')
         self.assertEqual(response.status_code, 201)
@@ -866,11 +866,11 @@ class PreguntaRetroalimentacionTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content)['count'], 0)
 
-    def test_list_on_contenido(self): 
+    def test_list_on_contenido(self):
         response = self.client.post(self.url, data=self.pregunta, format='json')
         self.pregunta["nombre"] = "Test2"
         self.pregunta["tieneRetroalimentacion"] = False
-        response = self.client.post(self.url, data=self.pregunta, format='json')     
+        response = self.client.post(self.url, data=self.pregunta, format='json')
 
         url = "/activities/retroalimentacion/" + str(self.marca.contenido.pk) + "/"
         response = self.client.get(url, format='json')
