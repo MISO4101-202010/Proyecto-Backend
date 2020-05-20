@@ -688,7 +688,6 @@ class GetRetroalimentacion(ListModelMixin, GenericAPIView):
 
     def get_queryset(self):
         id = self.kwargs.get(self.lookup_url_kwarg)
-        # interactive_content = ContenidoInteractivo.objects.get(id=id)
 
         return ContenidoInteractivo.objects.filter(id=id)
 
