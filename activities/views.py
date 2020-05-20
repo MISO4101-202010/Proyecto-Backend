@@ -682,6 +682,7 @@ class PreguntaVoFModificacionViewSet(GenericViewSet, UpdateModelMixin):
     serializer_class = PreguntaFoVSerializer
     http_method_names = ['patch']
 
+
 class GetRetroalimentacion(ListModelMixin, GenericAPIView):
     serializer_class = ContenidoInteractivoRetroalimentacionSerializer
     lookup_url_kwarg = "id"
@@ -694,6 +695,7 @@ class GetRetroalimentacion(ListModelMixin, GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
+
 
 class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
     serializer_class = ActividadPreguntaSerializer
