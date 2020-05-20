@@ -52,7 +52,7 @@ class GetInteractiveContentNowTestCase(TestCase):
         self.headers = {'Content-Type': 'application/json'}
         self.contenido = Contenido.objects.create(url="test", nombre="contenido test", profesor_id=self.user.id)
         self.interactive_content = {"nombre": "test", "contenido": self.contenido.id, "tiene_retroalimentacion": True}
-        
+
     def test_true_interactive_content(self):
         url = '/content/cont_interactivo'
         self.client.force_login(user=self.user)
