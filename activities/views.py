@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView, DestroyAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -370,11 +370,12 @@ class RespuestaSeleccionMultipleView(ListModelMixin, CreateModelMixin, GenericAP
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class CalificarAPI(ListCreateAPIView):
+class CalificarAPI(ListCreateAPIView, DestroyAPIView):
     # Add filter fields for the API
     filterset_fields = ("estudiante", "actividad")
     # serializer usado para la transformacion de datos
     serializer_class = CalificacionSerializer
+    lookup_field = "actividad"
 
     # queryset para retornar las calificaciones de un estudiante
     def get_queryset(self):
