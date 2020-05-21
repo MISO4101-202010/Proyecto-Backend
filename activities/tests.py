@@ -409,13 +409,14 @@ class RespuestaPreguntaAbiertaTestCase(TestCase):
                                           "estudiante": estudiante.pk,
                                           "intento": 1,
                                           "grupo": grupo.id,
-                                          "respuesta": "respuesta",
+                                          "respuesta": "respuesta estudiante",
                                           "retroalimentacion": "retroalimentacion"
 
                                           }
                                     )
 
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(json.loads(response.content)['respuesta'], "respuesta estudiante")
 
 
 class RespuestaPreguntaFoV(TestCase):
