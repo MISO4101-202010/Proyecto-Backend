@@ -20,11 +20,13 @@ class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSe
         total_qualifying_questions = get_total_qualifying_questions(obj.respuestmultiple.preguntaSeleccionMultiple.marca.contenido)
         qualification_by_question = 5/total_qualifying_questions if total_qualifying_questions > 0 else 0
         total_correct_options_by_question = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=True).count()
-        note = qualification_by_question/total_correct_options_by_question if total_correct_options_by_question > 0 and obj.respuestmultiple.esCorrecta else 0
+        note_by_option = qualification_by_question/total_correct_options_by_question if total_correct_options_by_question > 0 else 0
         qualification, created = Calificacion.objects.get_or_create(
             estudiante=obj.estudiante, actividad=obj.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": 0}
         )
-        qualification.calificacion = note if created else qualification.calificacion + Decimal(note)
+        note = note_by_option if obj.respuestmultiple.esCorrecta else -note_by_option
+        note = note if created else qualification.calificacion + Decimal(note)
+        qualification.calificacion = 0 if note < 0 else note
         qualification.save()
         return qualification.calificacion
 
