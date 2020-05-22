@@ -5,7 +5,6 @@ from activities.models import PreguntaOpcionMultiple, RespuestmultipleEstudiante
     PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, RespuestaVoF, Actividad
 
 from interactive_content.models import ContenidoInteractivo
-from .utils import get_total_qualifying_questions
 from decimal import Decimal
 
 class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
@@ -17,16 +16,14 @@ class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSe
     qualification = serializers.SerializerMethodField()
 
     def get_qualification(self, obj):
-        total_qualifying_questions = get_total_qualifying_questions(obj.respuestmultiple.preguntaSeleccionMultiple.marca.contenido)
-        qualification_by_question = 5/total_qualifying_questions if total_qualifying_questions > 0 else 0
-        total_correct_options_by_question = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=True).count()
-        note_by_option = qualification_by_question/total_correct_options_by_question if total_correct_options_by_question > 0 else 0
-        qualification, created = Calificacion.objects.get_or_create(
-            estudiante=obj.estudiante, actividad=obj.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": 0}
+        total_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple).count()
+        total_incorrect_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=False).count()
+        note_by_option = Decimal(1/total_options) if total_options > 0 else 0
+        base_note = note_by_option * total_incorrect_options
+        qualification, _ = Calificacion.objects.get_or_create(
+            estudiante=obj.estudiante, actividad=obj.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": base_note}
         )
-        note = note_by_option if obj.respuestmultiple.esCorrecta else -note_by_option
-        note = note if created else qualification.calificacion + Decimal(note)
-        qualification.calificacion = 0 if note < 0 else note
+        qualification.calificacion = qualification.calificacion + note_by_option if obj.respuestmultiple.esCorrecta else qualification.calificacion - note_by_option
         qualification.save()
         return qualification.calificacion
 
@@ -44,12 +41,11 @@ class QualificationFoVResponseSerializer(RespuestaFoVSerializer):
     qualification = serializers.SerializerMethodField()
 
     def get_qualification(self, obj):
-        total_qualifying_questions = get_total_qualifying_questions(obj.preguntaVoF.marca.contenido)
-        note = 5/total_qualifying_questions if total_qualifying_questions > 0 and obj.preguntaVoF.esVerdadero == obj.esVerdadero else 0
-        qualification, _ = Calificacion.objects.update_or_create(
+        note = 1 if obj.preguntaVoF.esVerdadero == obj.esVerdadero else 0
+        Calificacion.objects.update_or_create(
             estudiante=obj.estudiante, actividad=obj.preguntaVoF, defaults={"calificacion": note}
         )
-        return qualification.calificacion
+        return note
 
     class Meta:
         model = RespuestaVoF
