@@ -1,21 +1,25 @@
-from rest_framework import serializers
-from rest_framework.fields import SerializerMethodField, IntegerField, CharField
-
-from activities.models import PreguntaOpcionMultiple, RespuestmultipleEstudiante, Opcionmultiple, Calificacion, Marca, \
-    PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, RespuestaVoF, Actividad
-
-from interactive_content.models import ContenidoInteractivo
 from decimal import Decimal
+
+from rest_framework import serializers
+from rest_framework.fields import IntegerField, CharField
+
+from activities.models import PreguntaOpcionMultiple, \
+    RespuestmultipleEstudiante, Opcionmultiple, Calificacion, Marca, \
+    PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, \
+    RespuestaVoF, Actividad
+from interactive_content.models import ContenidoInteractivo
+
 
 class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
     class Meta:
         model = RespuestmultipleEstudiante
         fields = '__all__'
 
+
 class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSerializer):
     qualification = serializers.SerializerMethodField()
 
-    def get_qualification(self, obj):
+    def get_qualification(obj):
         total_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple).count()
         total_incorrect_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=False).count()
         note_by_option = Decimal(1/total_options) if total_options > 0 else 0
@@ -27,15 +31,18 @@ class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSe
         qualification.save()
         return qualification.calificacion
 
+
 class RespuestaAbiertaSerializer(serializers.ModelSerializer):
     class Meta:
         model = RespuestaAbiertaEstudiante
         fields = '__all__'
 
+
 class RespuestaFoVSerializer(serializers.ModelSerializer):
     class Meta:
         model = RespuestaVoF
         fields = '__all__'
+
 
 class QualificationFoVResponseSerializer(RespuestaFoVSerializer):
     qualification = serializers.SerializerMethodField()
@@ -50,6 +57,7 @@ class QualificationFoVResponseSerializer(RespuestaFoVSerializer):
     class Meta:
         model = RespuestaVoF
         fields = '__all__'
+
 
 class CalificacionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -112,6 +120,7 @@ class PreguntaAbiertaSerializer(serializers.ModelSerializer):
         model = PreguntaAbierta
         fields = '__all__'
 
+
 class MarcaConTipoActividadSerializer(serializers.ModelSerializer):
     marca_id = IntegerField(source="marca.id")
     nombre = CharField(source="marca.nombre")
@@ -122,10 +131,12 @@ class MarcaConTipoActividadSerializer(serializers.ModelSerializer):
         model = Actividad
         fields = ["tipoActividad", "marca_id", "nombre", "punto", "contenido"]
 
+
 class ActividadPreguntaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Actividad
         fields = ["id", "retroalimentacion"]
+
 
 class MarcaSerializerRetroalimentacion(serializers.ModelSerializer):
     actividades = serializers.SerializerMethodField('get_act')
@@ -137,6 +148,7 @@ class MarcaSerializerRetroalimentacion(serializers.ModelSerializer):
     class Meta:
         model = Marca
         fields = ["id", "actividades"]
+
 
 class ContenidoInteractivoRetroalimentacionSerializer(serializers.ModelSerializer):
     marcas = MarcaSerializerRetroalimentacion(read_only=True, many=True)
