@@ -103,6 +103,12 @@ class OpcionMultipleSerializer(serializers.ModelSerializer):
 
 
 class PreguntaFoVSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        qualification = Calificacion.objects.filter(actividad=obj).first()
+        return qualification.calificacion if qualification else 0
+
     class Meta:
         model = PreguntaFoV
         fields = '__all__'
