@@ -404,16 +404,16 @@ class RespuestaPreguntaAbiertaTestCase(TestCase):
 
         url = "/activities/respuestaAbierta/"
 
-        response = self.client.post(url, {"preguntaAbierta": pregunta.id,
-                                          "fecha_creacion": "2019-10-25 23:21:51.950232",
-                                          "estudiante": estudiante.pk,
-                                          "intento": 1,
-                                          "grupo": grupo.id,
-                                          "respuesta": "respuesta estudiante",
-                                          "retroalimentacion": "retroalimentacion"
-
-                                          }
-                                    )
+        response = self.client.post(url,
+                                    {
+                                        "preguntaAbierta": pregunta.id,
+                                        "fecha_creacion": "2019-10-25 23:21:51.950232",
+                                        "estudiante": estudiante.pk,
+                                        "intento": 1,
+                                        "grupo": grupo.id,
+                                        "respuesta": "respuesta estudiante",
+                                        "retroalimentacion": "retroalimentacion"
+                                    })
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(json.loads(response.content)['respuesta'], "respuesta estudiante")
@@ -442,15 +442,15 @@ class RespuestaPreguntaFoV(TestCase):
 
         url = "/activities/respuestafov/"
 
-        response = self.client.post(url, {"preguntaVoF": pregunta.id,
-                                          "fecha_creacion": "2019-10-25 23:21:51.950232",
-                                          "estudiante": estudiante.pk,
-                                          "intento": 1,
-                                          "grupo": grupo.id,
-                                          "esVerdadero": True
-
-                                          }
-                                    )
+        response = self.client.post(url,
+                                    {
+                                        "preguntaVoF": pregunta.id,
+                                        "fecha_creacion": "2019-10-25 23:21:51.950232",
+                                        "estudiante": estudiante.pk,
+                                        "intento": 1,
+                                        "grupo": grupo.id,
+                                        "esVerdadero": True
+                                    })
 
         self.assertEqual(response.status_code, 200)
 
@@ -616,14 +616,14 @@ class RespuestaSeleccionTestCase(TestCase):
         grupo.save()
         url = "/activities/respuestaOpcionMultiple/"
 
-        response = self.client.post(url, {"respuestmultiple": opcion.id,
-                                          "fecha_creacion": "2019-10-25 23:21:51.950232",
-                                          "estudiante": estudiante.pk,
-                                          "intento": 1,
-                                          "curso": grupo.id
-
-                                          }
-                                    )
+        response = self.client.post(url,
+                                    {
+                                        "respuestmultiple": opcion.id,
+                                        "fecha_creacion": "2019-10-25 23:21:51.950232",
+                                        "estudiante": estudiante.pk,
+                                        "intento": 1,
+                                        "curso": grupo.id
+                                    })
 
         self.assertEqual(response.status_code, 201)
 

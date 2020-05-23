@@ -19,7 +19,7 @@ class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
 class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSerializer):
     qualification = serializers.SerializerMethodField()
 
-    def get_qualification(obj):
+    def get_qualification(self, obj):
         total_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple).count()
         total_incorrect_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=False).count()
         note_by_option = Decimal(1/total_options) if total_options > 0 else 0
