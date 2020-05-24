@@ -22,7 +22,7 @@ class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSe
     def get_qualification(self, _):
         total_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=self.instance.respuestmultiple.preguntaSeleccionMultiple).count()
         total_incorrect_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=self.instance.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=False).count()
-        note_by_option = Decimal(1/total_options) if total_options > 0 else 0
+        note_by_option = Decimal(100/total_options) if total_options > 0 else 0
         base_note = note_by_option * total_incorrect_options
         qualification, _ = Calificacion.objects.get_or_create(
             estudiante=self.instance.estudiante, actividad=self.instance.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": base_note}
@@ -48,7 +48,7 @@ class QualificationFoVResponseSerializer(RespuestaFoVSerializer):
     qualification = serializers.SerializerMethodField()
 
     def get_qualification(self, _):
-        note = 1 if self.instance.preguntaVoF.esVerdadero == self.instance.esVerdadero else 0
+        note = 100 if self.instance.preguntaVoF.esVerdadero == self.instance.esVerdadero else 0
         Calificacion.objects.update_or_create(
             estudiante=self.instance.estudiante, actividad=self.instance.preguntaVoF, defaults={"calificacion": note}
         )
