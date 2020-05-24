@@ -1,25 +1,63 @@
+from decimal import Decimal
+
 from rest_framework import serializers
-from rest_framework.fields import SerializerMethodField, IntegerField, CharField
+from rest_framework.fields import IntegerField, CharField
 
-from activities.models import PreguntaOpcionMultiple, RespuestmultipleEstudiante, Opcionmultiple, Calificacion, Marca, \
-    PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, RespuestaVoF, Actividad
-
+from activities.models import PreguntaOpcionMultiple, \
+    RespuestmultipleEstudiante, Opcionmultiple, Calificacion, Marca, \
+    PreguntaFoV, Pausa, PreguntaAbierta, RespuestaAbiertaEstudiante, \
+    RespuestaVoF, Actividad
 from interactive_content.models import ContenidoInteractivo
+
 
 class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
     class Meta:
         model = RespuestmultipleEstudiante
         fields = '__all__'
 
+
+class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, _):
+        total_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=self.instance.respuestmultiple.preguntaSeleccionMultiple).count()
+        total_incorrect_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=self.instance.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=False).count()
+        note_by_option = Decimal(1/total_options) if total_options > 0 else 0
+        base_note = note_by_option * total_incorrect_options
+        qualification, _ = Calificacion.objects.get_or_create(
+            estudiante=self.instance.estudiante, actividad=self.instance.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": base_note}
+        )
+        qualification.calificacion = qualification.calificacion + note_by_option if self.instance.respuestmultiple.esCorrecta else qualification.calificacion - note_by_option
+        qualification.save()
+        return qualification.calificacion
+
+
 class RespuestaAbiertaSerializer(serializers.ModelSerializer):
     class Meta:
         model = RespuestaAbiertaEstudiante
         fields = '__all__'
 
+
 class RespuestaFoVSerializer(serializers.ModelSerializer):
     class Meta:
         model = RespuestaVoF
         fields = '__all__'
+
+
+class QualificationFoVResponseSerializer(RespuestaFoVSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, _):
+        note = 1 if self.instance.preguntaVoF.esVerdadero == self.instance.esVerdadero else 0
+        Calificacion.objects.update_or_create(
+            estudiante=self.instance.estudiante, actividad=self.instance.preguntaVoF, defaults={"calificacion": note}
+        )
+        return note
+
+    class Meta:
+        model = RespuestaVoF
+        fields = '__all__'
+
 
 class CalificacionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -82,6 +120,7 @@ class PreguntaAbiertaSerializer(serializers.ModelSerializer):
         model = PreguntaAbierta
         fields = '__all__'
 
+
 class MarcaConTipoActividadSerializer(serializers.ModelSerializer):
     marca_id = IntegerField(source="marca.id")
     nombre = CharField(source="marca.nombre")
@@ -92,10 +131,12 @@ class MarcaConTipoActividadSerializer(serializers.ModelSerializer):
         model = Actividad
         fields = ["tipoActividad", "marca_id", "nombre", "punto", "contenido"]
 
+
 class ActividadPreguntaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Actividad
         fields = ["id", "retroalimentacion"]
+
 
 class MarcaSerializerRetroalimentacion(serializers.ModelSerializer):
     actividades = serializers.SerializerMethodField('get_act')
@@ -107,6 +148,7 @@ class MarcaSerializerRetroalimentacion(serializers.ModelSerializer):
     class Meta:
         model = Marca
         fields = ["id", "actividades"]
+
 
 class ContenidoInteractivoRetroalimentacionSerializer(serializers.ModelSerializer):
     marcas = MarcaSerializerRetroalimentacion(read_only=True, many=True)
