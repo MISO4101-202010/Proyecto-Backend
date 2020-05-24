@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
+
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
     PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
 from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
@@ -21,6 +22,7 @@ from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
 
+import json
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
@@ -382,6 +384,7 @@ class CalificarAPI(ListCreateAPIView):
     def get_queryset(self):
         student = self.request.query_params.get('estudiante', None)
         activity = self.request.query_params.get('actividad', None)
+
         if (student):
             return Calificacion.objects.filter(estudiante=student)
         elif (activity):
@@ -706,3 +709,48 @@ class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
+
+class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
+
+    def get(self,request, *args, **kwargs):
+
+        student = self.request.query_params.get('estudiante', None)
+        contenidoInt = self.request.query_params.get('contenidoInt', None)
+
+        if (contenidoInt and student):
+
+            listaCalifaciones = []
+            respuestasCorrectas = 0
+            respuestasIncorrectas = 0
+            sumCalificaciones = 0
+            marcas = Marca.objects.filter(contenido=contenidoInt)
+
+            for marca in marcas:
+
+                actividad = Actividad.objects.filter(marca=getattr(marca, "id"))
+                calificacion = Calificacion.objects.filter(actividad=getattr(actividad[0], "id"),estudiante=student)
+
+                if calificacion.count() != 0:
+                    calificacionVal = getattr(calificacion[0], "calificacion")
+                    sumCalificaciones+=calificacionVal
+                    if calificacionVal == 0:
+                        respuestasIncorrectas +=1
+                    else:
+                        respuestasCorrectas+=1
+                else:
+                    calificacionVal = "Pendiente por calificar"
+
+                calificacionDict = {"nombrePregunta": str(getattr(actividad[0], "nombre")),
+                                    "respuestasPregunta": "",
+                                    "calificacion": str(calificacionVal)}
+                listaCalifaciones.append(calificacionDict)
+
+            notaTotal= sumCalificaciones / len(marcas)
+            reporteCalificaciones={"respuestasCorrectas": respuestasCorrectas,
+                                    "respuestasIncorrectas": respuestasIncorrectas,
+                                    "calificacionTotal": notaTotal,
+                                    "calificaciones": listaCalifaciones}
+
+            return JsonResponse(reporteCalificaciones, status=status.HTTP_200_OK)
+        else:
+            return Response({"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
