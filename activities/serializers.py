@@ -82,7 +82,6 @@ class PreguntaOpcionMultipleSerializer(serializers.ModelSerializer):
     qualification = serializers.SerializerMethodField()
 
     def get_qualification(self, obj):
-        self
         qualification = Calificacion.objects.filter(actividad=obj).first()
         return qualification.calificacion if qualification else 0
 
