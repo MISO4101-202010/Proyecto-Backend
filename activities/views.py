@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView, DestroyAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,10 +13,7 @@ from rest_framework.viewsets import GenericViewSet
 
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
     PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
-from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
-    RespuestaSeleccionMultipleSerializer, MarcaSerializer, PreguntaFoVSerializer, PausaSerializer, \
-    PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, \
-    MarcaConTipoActividadSerializer, ActividadPreguntaSerializer, ContenidoInteractivoRetroalimentacionSerializer
+from activities.serializers import ActividadPreguntaSerializer, CalificacionSerializer, ContenidoInteractivoRetroalimentacionSerializer, MarcaConTipoActividadSerializer, MarcaSerializer, PausaSerializer, PreguntaAbiertaSerializer, PreguntaFoVSerializer, PreguntaOpcionMultipleSerializer, QualificationFoVResponseSerializer, QualificationMultipleChoiceResponseSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, RespuestaSeleccionMultipleSerializer
 from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
@@ -339,6 +336,11 @@ class RespuestaSeleccionMultipleView(ListModelMixin, CreateModelMixin, GenericAP
     # clase serializer para la transformacion de datos del request
     serializer_class = RespuestaSeleccionMultipleSerializer
 
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return QualificationMultipleChoiceResponseSerializer
+        return self.serializer_class
+
     def perform_create(self, serializer):
         return serializer.save()
 
@@ -365,18 +367,15 @@ class RespuestaSeleccionMultipleView(ListModelMixin, CreateModelMixin, GenericAP
                 msj = {'max_attemps': 'Número de intentos maximos excedido'}
                 return Response(msj, status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class CalificarAPI(ListCreateAPIView):
+class CalificarAPI(ListCreateAPIView, DestroyAPIView):
     # Add filter fields for the API
     filterset_fields = ("estudiante", "actividad")
     # serializer usado para la transformacion de datos
     serializer_class = CalificacionSerializer
+    lookup_field = "actividad"
 
     # queryset para retornar las calificaciones de un estudiante
     def get_queryset(self):
@@ -606,6 +605,11 @@ class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView)
 class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
     serializer_class = RespuestaFoVSerializer
 
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return QualificationFoVResponseSerializer
+        return self.serializer_class
+
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
 
@@ -634,7 +638,7 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                     nueva_respuesta.estudiante = respuesta_previa.estudiante
                     nueva_respuesta.esVerdadero = respuesta_actual
                     nueva_respuesta.save()
-                    return Response(self.serializer_class(nueva_respuesta).data, status=status.HTTP_200_OK)
+                    return Response(self.get_serializer(nueva_respuesta).data, status=status.HTTP_200_OK)
                 else:
                     return Response(data={"Máximo número de intentos alcanzado"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -654,7 +658,7 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                 respuestaFoV.grupo = grupo
                 respuestaFoV.preguntaVoF = pregunta
                 respuestaFoV.save()
-                return Response(self.serializer_class(respuestaFoV).data, status=status.HTTP_200_OK)
+                return Response(self.get_serializer(respuestaFoV).data, status=status.HTTP_200_OK)
         else:
             return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
 
