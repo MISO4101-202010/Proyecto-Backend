@@ -127,6 +127,12 @@ class PausaSerializer(serializers.ModelSerializer):
 
 
 class PreguntaAbiertaSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        qualification = Calificacion.objects.filter(actividad=obj).first()
+        return qualification.calificacion if qualification else 0
+
     class Meta:
         model = PreguntaAbierta
         fields = '__all__'
