@@ -131,7 +131,7 @@ class PreguntaAbiertaSerializer(serializers.ModelSerializer):
 
     def get_qualification(self, obj):
         qualification = Calificacion.objects.filter(actividad=obj).first()
-        return qualification.calificacion if qualification else 0
+        return qualification.calificacion if qualification else None
 
     class Meta:
         model = PreguntaAbierta
