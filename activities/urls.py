@@ -22,6 +22,7 @@ urlpatterns = [
     path('preguntaOpcionMultiple/<int:marca>/', DetailPreguntaSeleccionMultiple.as_view()),
     path('preguntaAbierta/<int:marca>/', DetailPreguntaAbierta.as_view()),
     path('calificacion', CalificarAPI.as_view(), name='calificacion'),
+    path('calificacion/<int:actividad>/', CalificarAPI.as_view()),
     path('generate-question-multiple-choice', CreatePreguntaSeleccionMultiple.as_view(),
          name='pregunta seleccion multiple '),
     path('generate-open-question', CreatePreguntaAbierta.as_view(), name='pregunta abierta '),
