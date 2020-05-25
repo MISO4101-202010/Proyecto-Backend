@@ -82,7 +82,7 @@ select
 	marca.punto,
 	marca.nombre,
 	marca.contenido_id,
-	actividad."numeroDeIntentos"- count(om."preguntaSeleccionMultiple_id") as numIntentos
+	actividad."numeroDeIntentos" as numIntentos
 from
 	activities_actividad actividad
 inner join activities_marca marca on
