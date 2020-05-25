@@ -79,6 +79,11 @@ class OpcionmultipleSerializer(serializers.ModelSerializer):
 
 class PreguntaOpcionMultipleSerializer(serializers.ModelSerializer):
     opciones = OpcionmultipleSerializer(read_only=True, many=True)
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        qualification = Calificacion.objects.filter(actividad=obj).first()
+        return qualification.calificacion if qualification else 0
 
     class Meta:
         model = PreguntaOpcionMultiple
@@ -98,6 +103,12 @@ class OpcionMultipleSerializer(serializers.ModelSerializer):
 
 
 class PreguntaFoVSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        qualification = Calificacion.objects.filter(actividad=obj).first()
+        return qualification.calificacion if qualification else 0
+
     class Meta:
         model = PreguntaFoV
         fields = '__all__'
@@ -116,6 +127,12 @@ class PausaSerializer(serializers.ModelSerializer):
 
 
 class PreguntaAbiertaSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        qualification = Calificacion.objects.filter(actividad=obj).first()
+        return qualification.calificacion if qualification else None
+
     class Meta:
         model = PreguntaAbierta
         fields = '__all__'
