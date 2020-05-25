@@ -22,8 +22,6 @@ from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
 
-import json
-
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -712,6 +710,15 @@ class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
 
 class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
 
+    def dictRespuestaEst(self,cursor):
+        rows = cursor.fetchall()
+        result = {}
+        values = []
+        for row in rows:
+            values.append(row[1])
+            result[str(row[0])] = values
+        return result
+    
     def get(self,request, *args, **kwargs):
 
         student = self.request.query_params.get('estudiante', None)
@@ -725,10 +732,19 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
             sumCalificaciones = 0
             marcas = Marca.objects.filter(contenido=contenidoInt)
 
+            cursor = db.connection.cursor()
+
             for marca in marcas:
 
                 actividad = Actividad.objects.filter(marca=getattr(marca, "id"))
                 calificacion = Calificacion.objects.filter(actividad=getattr(actividad[0], "id"),estudiante=student)
+
+                with open('activities/raw_queries/getRespuestasEstudiante.sql', 'r') as file:
+                    query = file.read().replace('\n', ' ').replace('\t', ' ')
+                    cursor.execute(query, (contenidoInt, student, getattr(marca, "id"),
+                                           contenidoInt, student, getattr(marca, "id"),
+                                           getattr(marca, "id"), contenidoInt, student, getattr(marca, "id")))
+                respuestas = self.dictRespuestaEst(cursor)
 
                 if calificacion.count() != 0:
                     calificacionVal = getattr(calificacion[0], "calificacion")
@@ -741,8 +757,9 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
                     calificacionVal = "Pendiente por calificar"
 
                 calificacionDict = {"nombrePregunta": str(getattr(actividad[0], "nombre")),
-                                    "respuestasPregunta": "",
+                                    "respuestasPregunta": respuestas[str(getattr(marca, "id"))],
                                     "calificacion": str(calificacionVal)}
+                
                 listaCalifaciones.append(calificacionDict)
 
             notaTotal= sumCalificaciones / len(marcas)
