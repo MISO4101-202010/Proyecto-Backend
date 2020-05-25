@@ -420,7 +420,6 @@ class MarcaApi(ListModelMixin, GenericAPIView):
 
     def delete(self, request, *args, **kwargs):
         # find all activities by mark
-        lookup_url_kwarg = "marca"
         marca = get_object_or_404(Marca, id=kwargs['marca'])
         activities_by_mark = Actividad.objects.filter(marca=marca)
         if len(activities_by_mark) > 0:
@@ -437,10 +436,8 @@ class MarcaApi(ListModelMixin, GenericAPIView):
                                     status=status.HTTP_406_NOT_ACCEPTABLE)
             else:
                 for activity in activities_by_mark:
-                    activity.delete
+                    activity.delete()
                     activity.marca.delete()
-
-
                 return JsonResponse({'msj': 'Borrado exitoso '},
                                     status=status.HTTP_200_OK)
         else:
