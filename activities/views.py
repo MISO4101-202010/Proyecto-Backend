@@ -755,12 +755,12 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
                         respuestasCorrectas+=1
                 else:
                     calificacionVal = "Pendiente por calificar"
+                if str(getattr(marca, "id")) in respuestas:
+                    calificacionDict = {"nombrePregunta": str(getattr(actividad[0], "nombre")),
+                                        "respuestasPregunta": respuestas[str(getattr(marca, "id"))],
+                                        "calificacion": str(calificacionVal)}
 
-                calificacionDict = {"nombrePregunta": str(getattr(actividad[0], "nombre")),
-                                    "respuestasPregunta": respuestas[str(getattr(marca, "id"))],
-                                    "calificacion": str(calificacionVal)}
-                
-                listaCalifaciones.append(calificacionDict)
+                    listaCalifaciones.append(calificacionDict)
 
             notaTotal= sumCalificaciones / len(marcas)
             reporteCalificaciones={"respuestasCorrectas": respuestasCorrectas,
