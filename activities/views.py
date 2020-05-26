@@ -11,7 +11,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
     PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
 from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
@@ -21,6 +20,7 @@ from activities.serializers import PreguntaOpcionMultipleSerializer, Calificacio
 from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
+
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
@@ -69,7 +69,8 @@ def reports(request, contentpk):
 
         for pregunta in preguntas_vof:
             if isinstance(pregunta, PreguntaFoV):
-                big_json['marcas'][-1]['preguntas'].append({'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
+                big_json['marcas'][-1]['preguntas'].append(
+                    {'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
                      'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
                 howManyTrue = RespuestaVoF.objects.filter(
                     preguntaVoF=pregunta, esVerdadero=True).count()  # "howTrue":value
@@ -109,7 +110,7 @@ class MarcaView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
     def put(self, request, *args, **kwargs):
         marca_id = self.request.data.get('marca_id')
-        marca = get_object_or_404(Marca, id =marca_id)
+        marca = get_object_or_404(Marca, id=marca_id)
         marca.nombre = self.request.data.get('nombre')
         marca.punto = self.request.data.get('punto')
         marca.save()
@@ -163,7 +164,6 @@ class CreatePreguntaAbierta(RetrieveUpdateAPIView):
         return Response(data=PreguntaAbiertaSerializer(question).data, status=status.HTTP_201_CREATED)
 
 
-
 def index_of(val, in_list):
     try:
         return in_list.index(val)
@@ -208,11 +208,11 @@ class CreatePreguntaSeleccionMultiple(RetrieveUpdateAPIView):
             question.save()
             options = question_data.get('opciones')
             listOption = [o.get('opcion_id') for o in options]
-            #validar eliminados
+            # validar eliminados
             options_ = Opcionmultiple.objects.filter(preguntaSeleccionMultiple_id=seleccion_multiple_id);
             for option in options_:
                 if index_of(option.id, listOption) == -1:
-                 option.delete()
+                    option.delete()
             for option in options:
                 try:
                     option_id = option.get('opcion_id')
@@ -415,7 +415,6 @@ class MarcaApi(ListModelMixin, GenericAPIView):
                                     safe=False)
         except Exception as e:
             return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
-
 
 
 def intentos_max(request):
@@ -672,7 +671,7 @@ def dictfetchall(cursor):
     "Return all rows from a cursor as a dict."
     rows = cursor.fetchall()
     result = []
-    keys = ('id','marca_id','tipoActividad','punto','nombre','contenido_id','numIntentos')
+    keys = ('id', 'marca_id', 'tipoActividad', 'punto', 'nombre', 'contenido_id', 'numIntentos')
     for row in rows:
         result.append(dict(zip(keys, row)))
     return result
@@ -703,14 +702,15 @@ class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
 
     def get_queryset(self):
         marca = self.kwargs.get(self.lookup_url_kwarg)
-        return Actividad.objects.filter(id=marca,tieneRetroalimentacion=True)
+        return Actividad.objects.filter(id=marca, tieneRetroalimentacion=True)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
 
+
 class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
 
-    def dictRespuestaEst(self,cursor):
+    def dictRespuestaEst(self, cursor):
         rows = cursor.fetchall()
         result = {}
         values = []
@@ -718,8 +718,7 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
             values.append(row[1])
             result[str(row[0])] = values
         return result
-    
-    def get(self,request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
 
         student = self.request.query_params.get('estudiante', None)
         contenidoInt = self.request.query_params.get('contenidoInt', None)
@@ -737,7 +736,7 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
             for marca in marcas:
 
                 actividad = Actividad.objects.filter(marca=getattr(marca, "id"))
-                calificacion = Calificacion.objects.filter(actividad=getattr(actividad[0], "id"),estudiante=student)
+                calificacion = Calificacion.objects.filter(actividad=getattr(actividad[0], "id"), estudiante=student)
 
                 with open('activities/raw_queries/getRespuestasEstudiante.sql', 'r') as file:
                     query = file.read().replace('\n', ' ').replace('\t', ' ')
@@ -748,11 +747,11 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
 
                 if calificacion.count() != 0:
                     calificacionVal = getattr(calificacion[0], "calificacion")
-                    sumCalificaciones+=calificacionVal
+                    sumCalificaciones += calificacionVal
                     if calificacionVal == 0:
-                        respuestasIncorrectas +=1
+                        respuestasIncorrectas += 1
                     else:
-                        respuestasCorrectas+=1
+                        respuestasCorrectas += 1
                 else:
                     calificacionVal = "Pendiente por calificar"
                 if str(getattr(marca, "id")) in respuestas:
@@ -762,11 +761,11 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
 
                     listaCalifaciones.append(calificacionDict)
 
-            notaTotal= sumCalificaciones / len(marcas)
-            reporteCalificaciones={"respuestasCorrectas": respuestasCorrectas,
-                                    "respuestasIncorrectas": respuestasIncorrectas,
-                                    "calificacionTotal": notaTotal,
-                                    "calificaciones": listaCalifaciones}
+            notaTotal = sumCalificaciones / len(marcas)
+            reporteCalificaciones = {"respuestasCorrectas": respuestasCorrectas,
+                                     "respuestasIncorrectas": respuestasIncorrectas,
+                                     "calificacionTotal": notaTotal,
+                                     "calificaciones": listaCalifaciones}
 
             return JsonResponse(reporteCalificaciones, status=status.HTTP_200_OK)
         else:
