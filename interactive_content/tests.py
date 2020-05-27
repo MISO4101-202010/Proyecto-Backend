@@ -23,12 +23,13 @@ class CreateInteractiveContentTestCase(TestCase):
         url = '/content/cont_interactivo'
         self.client.force_login(user=self.user)
         contenido = Contenido.objects.create(url="test.com", nombre="contenido test", profesor_id=self.user.id)
-        interactive_content = {"nombre": "test", "contenido": contenido.id}
+        interactive_content = {"nombre": "test", "contenido": contenido.id, "es_calificable": True}
         response = self.client.post(url, interactive_content, format='json',
                                     HTTP_AUTHORIZATION='Token ' + self.token.key)
         current_data = json.loads(response.content)
         self.assertEqual(current_data['nombre'], 'test')
         self.assertEqual(current_data['contenido']['id'], contenido.id)
+        self.assertTrue(current_data['es_calificable'])
 
     def test_unauthorized_user(self):
         url = '/content/cont_interactivo'

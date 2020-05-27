@@ -19,15 +19,15 @@ class RespuestaSeleccionMultipleSerializer(serializers.ModelSerializer):
 class QualificationMultipleChoiceResponseSerializer(RespuestaSeleccionMultipleSerializer):
     qualification = serializers.SerializerMethodField()
 
-    def get_qualification(self, _):
-        total_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=self.instance.respuestmultiple.preguntaSeleccionMultiple).count()
-        total_incorrect_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=self.instance.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=False).count()
-        note_by_option = Decimal(1/total_options) if total_options > 0 else 0
+    def get_qualification(self, obj):
+        total_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple).count()
+        total_incorrect_options = Opcionmultiple.objects.filter(preguntaSeleccionMultiple=obj.respuestmultiple.preguntaSeleccionMultiple, esCorrecta=False).count()
+        note_by_option = Decimal(100/total_options) if total_options > 0 else 0
         base_note = note_by_option * total_incorrect_options
         qualification, _ = Calificacion.objects.get_or_create(
-            estudiante=self.instance.estudiante, actividad=self.instance.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": base_note}
+            estudiante=obj.estudiante, actividad=obj.respuestmultiple.preguntaSeleccionMultiple, defaults={"calificacion": base_note}
         )
-        qualification.calificacion = qualification.calificacion + note_by_option if self.instance.respuestmultiple.esCorrecta else qualification.calificacion - note_by_option
+        qualification.calificacion = qualification.calificacion + note_by_option if obj.respuestmultiple.esCorrecta else qualification.calificacion - note_by_option
         qualification.save()
         return qualification.calificacion
 
@@ -47,10 +47,10 @@ class RespuestaFoVSerializer(serializers.ModelSerializer):
 class QualificationFoVResponseSerializer(RespuestaFoVSerializer):
     qualification = serializers.SerializerMethodField()
 
-    def get_qualification(self, _):
-        note = 1 if self.instance.preguntaVoF.esVerdadero == self.instance.esVerdadero else 0
+    def get_qualification(self, obj):
+        note = 100 if obj.preguntaVoF.esVerdadero == obj.esVerdadero else 0
         Calificacion.objects.update_or_create(
-            estudiante=self.instance.estudiante, actividad=self.instance.preguntaVoF, defaults={"calificacion": note}
+            estudiante=obj.estudiante, actividad=obj.preguntaVoF, defaults={"calificacion": note}
         )
         return note
 
@@ -79,6 +79,11 @@ class OpcionmultipleSerializer(serializers.ModelSerializer):
 
 class PreguntaOpcionMultipleSerializer(serializers.ModelSerializer):
     opciones = OpcionmultipleSerializer(read_only=True, many=True)
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        qualification = Calificacion.objects.filter(actividad=obj).first()
+        return qualification.calificacion if qualification else 0
 
     class Meta:
         model = PreguntaOpcionMultiple
@@ -98,6 +103,12 @@ class OpcionMultipleSerializer(serializers.ModelSerializer):
 
 
 class PreguntaFoVSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        qualification = Calificacion.objects.filter(actividad=obj).first()
+        return qualification.calificacion if qualification else 0
+
     class Meta:
         model = PreguntaFoV
         fields = '__all__'
@@ -116,6 +127,12 @@ class PausaSerializer(serializers.ModelSerializer):
 
 
 class PreguntaAbiertaSerializer(serializers.ModelSerializer):
+    qualification = serializers.SerializerMethodField()
+
+    def get_qualification(self, obj):
+        qualification = Calificacion.objects.filter(actividad=obj).first()
+        return qualification.calificacion if qualification else None
+
     class Meta:
         model = PreguntaAbierta
         fields = '__all__'
