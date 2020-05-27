@@ -540,11 +540,10 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
             pregunta1 = PreguntaAbierta.objects.filter(
                 id=self.request.data['preguntaAbierta']
             )
-            print('xxxx', pregunta1)
+
             pregunta = pregunta1[0]
 
-            # pregunta = pregunta1[0].preguntaSeleccionMultiple
-            # valida si el intento de la respuesta es menor o igual al max de intentos permitidos
+
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
                 serializer.is_valid(raise_exception=True)
@@ -565,7 +564,7 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
 class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView):
     queryset = RespuestaVoF.objects.all()
-    # clase serializer para la transformacion de datos del request
+
     serializer_class = RespuestaFoVSerializer
 
     def perform_create(self, serializer):
@@ -585,8 +584,6 @@ class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView)
             )
             pregunta = pregunta1[0]
 
-            # pregunta = pregunta1[0].preguntaSeleccionMultiple
-            # valida si el intento de la respuesta es menor o igual al max de intentos permitidos
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
                 serializer.is_valid(raise_exception=True)
@@ -619,8 +616,6 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
         return self.create(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-        '''Validar si la información necesaria viene'''
-        # Validar extraer los datos del request
         preguntaVoF_id = self.request.data['preguntaVoF']
         estudiante_id = self.request.data['estudiante']
         respuesta_actual = self.request.data['esVerdadero']
