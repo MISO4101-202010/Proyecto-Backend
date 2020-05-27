@@ -36,7 +36,7 @@ select
     marca.id id_marca,
 	marca.nombre,
 	om.opcion as respuesta,
-	((case When om."esCorrecta"=true then 5 else 0 end)::NUMERIC /(select (count(*))::NUMERIC from activities_opcionmultiple where "preguntaSeleccionMultiple_id"=om."preguntaSeleccionMultiple_id")) calificacion,
+	case when rca.calificacion is not null then rca.calificacion else ((case When om."esCorrecta"=true then 5 else -5 end)::NUMERIC /(select (count(*))::NUMERIC from activities_opcionmultiple where "preguntaSeleccionMultiple_id"=om."preguntaSeleccionMultiple_id")) end calificacion,
 	resp.intento
 	from
 	activities_actividad actividad
@@ -45,5 +45,6 @@ select
 	inner join activities_opcionmultiple om on om."preguntaSeleccionMultiple_id" = pom.actividad_ptr_id
 	inner join activities_respuestmultipleestudiante rme on rme.respuestmultiple_id  = om.id
 	inner join activities_respuesta resp on resp.id = rme.respuesta_ptr_id
+	left join activities_calificacion rca on rca.actividad_id=rme.respuestmultiple_id
 	where marca.contenido_id = %s and resp.estudiante_id = %s and marca.id = %s
 order by 6 desc

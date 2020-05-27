@@ -798,36 +798,38 @@ class GetResponses(ListModelMixin, GenericAPIView):
             sumCalificaciones = 0
             notaTotal = 0
             marcas = Marca.objects.filter(contenido=contenidoInt)
-
-            cursor = db.connection.cursor()
-
-            for marca in marcas:
-
-                with open('activities/raw_queries/getResponses.sql', 'r') as file:
-                    query = file.read().replace('\n', ' ').replace('\t', ' ')
-                    cursor.execute(query, (contenidoInt, student, getattr(marca, "id"),
-                                           contenidoInt, student, getattr(marca, "id"),
-                                           contenidoInt, student, getattr(marca, "id")))
-                if cursor.rowcount > 0:
-                    respuestas = self.dictRespuestaEst(cursor)
-                    preguntasCalificadas += 1
-
-                    if len(respuestas) > 1:
-                        intento = respuestas[0]['intento']
-                        for respuesta in respuestas:
-                            if respuesta['intento'] == intento:
-                                if respuesta['calificacion'] is not None:
-                                    sumCalificaciones += respuesta['calificacion']
-                                else:
-                                    preguntasCalificadas += -1
-                    elif len(respuestas) == 1:
-                        if respuestas[0]['calificacion'] is not None:
-                            sumCalificaciones += respuestas[0]['calificacion']
-                        else:
-                            preguntasCalificadas += -1
-
+            try:
+                cursor = db.connection.cursor()
+                for marca in marcas:
+                    with open('activities/raw_queries/getResponses.sql', 'r') as file:
+                        query = file.read().replace('\n', ' ').replace('\t', ' ')
+                        cursor.execute(query, (contenidoInt, student, getattr(marca, "id"),
+                                               contenidoInt, student, getattr(marca, "id"),
+                                               contenidoInt, student, getattr(marca, "id")))
+                    if cursor.rowcount > 0:
+                        respuestas = self.dictRespuestaEst(cursor)
+                        preguntasCalificadas += 1
+                        if len(respuestas) > 1:
+                            intento = respuestas[0]['intento']
+                            for respuesta in respuestas:
+                                if respuesta['intento'] == intento:
+                                    if respuesta['calificacion'] is not None:
+                                        sumCalificaciones += respuesta['calificacion']
+                                    else:
+                                        preguntasCalificadas += -1
+                        elif len(respuestas) == 1:
+                            if respuestas[0]['calificacion'] is not None:
+                                sumCalificaciones += respuestas[0]['calificacion']
+                            else:
+                                preguntasCalificadas += -1
+            except:
+                return Response({"Error al calcular la nota"}, status=status.HTTP_400_BAD_REQUEST)
+            finally:
+                cursor.close()
             if len(marcas) > 0:
                 notaTotal = sumCalificaciones / len(marcas)
+            if notaTotal < 0:
+                notaTotal = 0
             reporteCalificaciones = {"preguntasCalificadas": preguntasCalificadas,
                                      "totalPreguntas": len(marcas),
                                      "calificacionTotal": notaTotal,
