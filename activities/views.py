@@ -770,3 +770,63 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
             return JsonResponse(reporteCalificaciones, status=status.HTTP_200_OK)
         else:
             return Response({"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetResponses(ListModelMixin, GenericAPIView):
+
+    def dictRespuestaEst(self, cursor):
+        rows = [x for x in cursor]
+        cols = [x[0] for x in cursor.description]
+        respuestas = []
+        for row in rows:
+            respuesta = {}
+            for prop, val in zip(cols, row):
+                respuesta[prop] = val
+            respuestas.append(respuesta)
+        # Create a string representation of your array of songs.
+        return respuestas
+
+    def get(self, request, *args, **kwargs):
+
+        student = self.request.query_params.get('estudiante', None)
+        contenidoInt = self.request.query_params.get('contenidoInt', None)
+
+        if contenidoInt and student:
+
+            respuestas = []
+            preguntasCalificadas = 0
+            sumCalificaciones = 0
+            notaTotal = 0
+            marcas = Marca.objects.filter(contenido=contenidoInt)
+
+            cursor = db.connection.cursor()
+
+            for marca in marcas:
+
+                with open('activities/raw_queries/getResponses.sql', 'r') as file:
+                    query = file.read().replace('\n', ' ').replace('\t', ' ')
+                    cursor.execute(query, (contenidoInt, student, getattr(marca, "id"),
+                                           contenidoInt, student, getattr(marca, "id"),
+                                           contenidoInt, student, getattr(marca, "id")))
+                if cursor.rowcount > 0:
+                    respuestas = self.dictRespuestaEst(cursor)
+                    preguntasCalificadas += 1
+
+                    if len(respuestas) > 1:
+                        intento = respuestas[0]['intento']
+                        for respuesta in respuestas:
+                            if respuesta['intento'] == intento:
+                                sumCalificaciones += respuesta['calificacion']
+                    elif len(respuestas) == 1:
+                        sumCalificaciones += respuestas[0]['calificacion']
+
+            if len(marcas) > 0:
+                notaTotal = sumCalificaciones / len(marcas)
+            reporteCalificaciones = {"preguntasCalificadas": preguntasCalificadas,
+                                     "totalPreguntas": len(marcas),
+                                     "calificacionTotal": notaTotal,
+                                     "respuestas": respuestas}
+
+            return JsonResponse(reporteCalificaciones, status=status.HTTP_200_OK)
+        else:
+            return Response({"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
