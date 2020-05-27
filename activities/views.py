@@ -584,7 +584,6 @@ class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView)
             )
             pregunta = pregunta1[0]
 
-          
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
                 serializer.is_valid(raise_exception=True)
@@ -617,7 +616,7 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
         return self.create(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-        '''Validar si la información necesaria viene'''
+       
         # Validar extraer los datos del request
         preguntaVoF_id = self.request.data['preguntaVoF']
         estudiante_id = self.request.data['estudiante']
