@@ -616,8 +616,6 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
         return self.create(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-       
-        # Validar extraer los datos del request
         preguntaVoF_id = self.request.data['preguntaVoF']
         estudiante_id = self.request.data['estudiante']
         respuesta_actual = self.request.data['esVerdadero']
