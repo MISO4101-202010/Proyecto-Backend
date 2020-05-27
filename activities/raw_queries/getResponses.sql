@@ -28,7 +28,7 @@ from
 	inner join activities_marca marca on marca.id = actividad.marca_id
 	inner join activities_respuestaabiertaestudiante rpa on actividad.id = rpa."preguntaAbierta_id"
 	inner join activities_respuesta resp on resp.id = rpa.respuesta_ptr_id
-	inner join activities_calificacion rca on rca.actividad_id=rpa."preguntaAbierta_id"
+	left join activities_calificacion rca on rca.actividad_id=rpa."preguntaAbierta_id"
 	where marca.contenido_id = %s and resp.estudiante_id = %s and marca.id = %s
 union all
 select

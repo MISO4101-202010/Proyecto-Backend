@@ -816,9 +816,15 @@ class GetResponses(ListModelMixin, GenericAPIView):
                         intento = respuestas[0]['intento']
                         for respuesta in respuestas:
                             if respuesta['intento'] == intento:
-                                sumCalificaciones += respuesta['calificacion']
+                                if respuesta['calificacion'] is not None:
+                                    sumCalificaciones += respuesta['calificacion']
+                                else:
+                                    preguntasCalificadas += -1
                     elif len(respuestas) == 1:
-                        sumCalificaciones += respuestas[0]['calificacion']
+                        if respuestas[0]['calificacion'] is not None:
+                            sumCalificaciones += respuestas[0]['calificacion']
+                        else:
+                            preguntasCalificadas += -1
 
             if len(marcas) > 0:
                 notaTotal = sumCalificaciones / len(marcas)

@@ -286,15 +286,13 @@ class GetQualificationByCourse(ListModelMixin, GenericAPIView):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.client = APIClient()
 
     def get(self, request, *args, **kwargs):
         student = self.request.query_params.get('estudiante', None)
         cursoId = self.request.query_params.get('curso', None)
         data = []
         if cursoId and student:
+            self.client = APIClient()
             for content in ContenidoInteractivo.objects.filter(curso=cursoId):
                 url = "/activities/respuestas?estudiante=" + str(student) + "&contenidoInt=" + str(
                     content.id)
