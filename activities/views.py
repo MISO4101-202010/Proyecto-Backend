@@ -12,8 +12,12 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
-    PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
-from activities.serializers import ActividadPreguntaSerializer, CalificacionSerializer, ContenidoInteractivoRetroalimentacionSerializer, MarcaConTipoActividadSerializer, MarcaSerializer, PausaSerializer, PreguntaAbiertaSerializer, PreguntaFoVSerializer, PreguntaOpcionMultipleSerializer, QualificationFoVResponseSerializer, QualificationMultipleChoiceResponseSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, RespuestaSeleccionMultipleSerializer
+    PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante, Respuesta
+from activities.serializers import ActividadPreguntaSerializer, CalificacionSerializer, \
+    ContenidoInteractivoRetroalimentacionSerializer, MarcaConTipoActividadSerializer, MarcaSerializer, PausaSerializer, \
+    PreguntaAbiertaSerializer, PreguntaFoVSerializer, PreguntaOpcionMultipleSerializer, \
+    QualificationFoVResponseSerializer, QualificationMultipleChoiceResponseSerializer, RespuestaAbiertaSerializer, \
+    RespuestaFoVSerializer, RespuestaSeleccionMultipleSerializer
 from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
@@ -417,6 +421,32 @@ class MarcaApi(ListModelMixin, GenericAPIView):
         except Exception as e:
             return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
 
+    def delete(self, request, *args, **kwargs):
+        # find all activities by mark
+        marca = get_object_or_404(Marca, id=kwargs['marca'])
+        activities_by_mark = Actividad.objects.filter(marca=marca)
+        if len(activities_by_mark) > 0:
+            # check answers by mark
+            respuestas_abiertas = RespuestaAbiertaEstudiante.objects.filter(
+                preguntaAbierta__marca=marca)
+            respuestas_fov = RespuestaVoF.objects.filter(
+                preguntaVoF__marca=marca)
+            respuestas_seleccion_multiple = RespuestmultipleEstudiante.objects.filter(
+                respuestmultiple__preguntaSeleccionMultiple__marca_id=marca)
+            total_respuestas = len(respuestas_abiertas) + len(respuestas_fov) + len(respuestas_seleccion_multiple)
+            if total_respuestas > 0:
+                return JsonResponse({'msj': 'Hay respuestas asociadas a esa pregunta'},
+                                    status=status.HTTP_406_NOT_ACCEPTABLE)
+            else:
+                for activity in activities_by_mark:
+                    activity.delete()
+                    activity.marca.delete()
+                return JsonResponse({'msj': 'Borrado exitoso '},
+                                    status=status.HTTP_200_OK)
+        else:
+            marca.delete()
+            return JsonResponse({'msj': 'Borrado exitoso'},
+                                status=status.HTTP_200_OK)
 
 def intentos_max(request):
     if request.method == 'GET':

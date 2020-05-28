@@ -9,7 +9,8 @@ from rest_framework.test import APIClient
 
 from interactive_content.models import ContenidoInteractivo, Contenido, Curso, Grupo
 from activities.models import Marca, PreguntaOpcionMultiple, Opcionmultiple, Calificacion, Pausa, \
-    PreguntaAbierta, PreguntaFoV, Respuesta, RespuestaAbiertaEstudiante, RespuestaVoF, RespuestmultipleEstudiante
+    PreguntaAbierta, PreguntaFoV, RespuestaVoF, PreguntaAbierta, PreguntaFoV, Respuesta, RespuestaAbiertaEstudiante, \
+    RespuestaVoF, RespuestmultipleEstudiante, Actividad
 
 from users.models import Profesor, Estudiante
 from rest_framework.authtoken.models import Token
@@ -827,6 +828,114 @@ class MarcaTestCases (TestCase):
         new_marca = {"marca_id": 99999999, "nombre": "marca2", "punto": 30}
         response = self.client.put(url, new_marca, content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_marca_with_no_answers(self):
+        url = '/activities/marcas/{}'
+
+        profesor = Profesor()
+        profesor.email = 'mail@mail.com'
+        profesor.username = 'profesor'
+        profesor.password = 'password'
+        profesor.save()
+
+        contenido = Contenido()
+        contenido.nombre = 'Contenido Profesor1'
+        contenido.profesor = profesor
+        contenido.url = url
+        contenido.save()
+
+        curso = Curso()
+        curso.nombre = 'curso1'
+        curso.profesor = profesor
+        curso.descripcion = 'Curso 1'
+        curso.save()
+
+        contenido_interactivo = ContenidoInteractivo()
+        contenido_interactivo.nombre = 'Cont Interactivo 1'
+        contenido_interactivo.contenido = contenido
+        contenido_interactivo.save()
+        contenido_interactivo.curso.add(curso)
+
+        marca = Marca()
+        marca.contenido = contenido_interactivo
+        marca.nombre = 'marca1'
+        marca.punto = 30
+        marca.save()
+
+        preguntafov = PreguntaFoV()
+        preguntafov.marca = marca
+        preguntafov.nombre = 'pregutna fov'
+        preguntafov.esVerdadero = True
+        preguntafov.numeroDeIntentos = 5
+        preguntafov.retroalimentacion = False
+        preguntafov.save()
+
+        response = self.client.delete(url.format(marca.id), content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(0, Marca.objects.filter(id=marca.id).count())
+        self.assertEqual(0, Actividad.objects.filter(marca=marca.id).count())
+
+    def test_delete_marca_with_answers(self):
+        url = '/activities/marcas/{}'
+
+        profesor = Profesor()
+        profesor.email = 'mail@mail.com'
+        profesor.username = 'profesor'
+        profesor.password = 'password'
+        profesor.save()
+
+        contenido = Contenido()
+        contenido.nombre = 'Contenido Profesor1'
+        contenido.profesor = profesor
+        contenido.url = url
+        contenido.save()
+
+        curso = Curso()
+        curso.nombre = 'curso1'
+        curso.profesor = profesor
+        curso.descripcion = 'Curso 1'
+        curso.save()
+
+        contenido_interactivo = ContenidoInteractivo()
+        contenido_interactivo.nombre = 'Cont Interactivo 1'
+        contenido_interactivo.contenido = contenido
+        contenido_interactivo.save()
+        contenido_interactivo.curso.add(curso)
+
+        marca = Marca()
+        marca.contenido = contenido_interactivo
+        marca.nombre = 'marca1'
+        marca.punto = 30
+        marca.save()
+
+        preguntafov = PreguntaFoV()
+        preguntafov.marca = marca
+        preguntafov.nombre = 'pregutna fov'
+        preguntafov.esVerdadero = True
+        preguntafov.numeroDeIntentos = 5
+        preguntafov.retroalimentacion = False
+        preguntafov.save()
+
+        estudiante = Estudiante()
+        estudiante.username = 'estudiante1'
+        estudiante.password = 'password'
+        estudiante.email = 'mail@mail.com'
+        estudiante.save()
+
+        respuesta_pregunta_fov = RespuestaVoF()
+        respuesta_pregunta_fov.esVerdadero = False
+        respuesta_pregunta_fov.estudiante = estudiante
+        respuesta_pregunta_fov.grupo = None
+        respuesta_pregunta_fov.intento = 1
+        respuesta_pregunta_fov.preguntaVoF=preguntafov
+        respuesta_pregunta_fov.save()
+
+        response = self.client.delete(url.format(marca.id), content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_406_NOT_ACCEPTABLE)
+        self.assertEqual(1, Marca.objects.filter(id=marca.id).count())
+        self.assertEqual(1, Actividad.objects.filter(marca=marca.id).count())
+
+
 
 
 class PreguntaRetroalimentacionTestCase(TestCase):
