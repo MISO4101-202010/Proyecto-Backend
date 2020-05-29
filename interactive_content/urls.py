@@ -2,7 +2,7 @@ from django.conf.urls import url
 from django.urls import path
 
 from interactive_content import views
-from interactive_content.views import GetCourseView
+from interactive_content.views import GetCourseView, GetQualificationByCourse
 
 app_name = 'interactiveContent'
 
@@ -16,5 +16,6 @@ urlpatterns = [
     url(r'^courses/(?P<content_id>\d+)/$', views.courses_content_view, name='courses'),
     url(r'^interactivecontent/(?P<pk>[0-9]+)$', views.ContenidoInteractivoDetail.as_view(), name='interactive_content'),
     path('courses/details/', GetCourseView.as_view(), name="info courses"),
-    path('interactiveContentByCourse/<int:course_id>/', views.interactive_content_by_course)
+    path('interactiveContentByCourse/<int:course_id>/', views.interactive_content_by_course),
+    path('qualificationByCourse', GetQualificationByCourse.as_view()),
 ]

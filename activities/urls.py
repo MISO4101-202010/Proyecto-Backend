@@ -5,7 +5,8 @@ from activities.views import CalificarAPI, MarcaApi, intentos_max, GetPausesView
     MarcaView, reports, RespuestaSeleccionMultipleView, CreatePreguntaSeleccionMultiple, PausaDetail, \
     CreatePreguntaAbierta, DetailPreguntaSeleccionMultiple, \
     tipo_actividad, PreguntaFoVGetOne, PreguntaFoVView, \
-    RespuestaFoVView, RespuestaAbiertaView, DetailPreguntaAbierta, PreguntaVoFModificacionViewSet ,GetRetroalimentacion, GetRetroalimentacionPregunta
+    RespuestaFoVView, RespuestaAbiertaView, DetailPreguntaAbierta, PreguntaVoFModificacionViewSet, GetRetroalimentacion, \
+    GetRetroalimentacionPregunta, GetReporteCalificaciones, GetResponses
 
 app_name = 'activities'
 # add url path to the API
@@ -22,10 +23,12 @@ urlpatterns = [
     path('preguntaOpcionMultiple/<int:marca>/', DetailPreguntaSeleccionMultiple.as_view()),
     path('preguntaAbierta/<int:marca>/', DetailPreguntaAbierta.as_view()),
     path('calificacion', CalificarAPI.as_view(), name='calificacion'),
+    path('calificacion/<int:actividad>/', CalificarAPI.as_view()),
     path('generate-question-multiple-choice', CreatePreguntaSeleccionMultiple.as_view(),
          name='pregunta seleccion multiple '),
     path('generate-open-question', CreatePreguntaAbierta.as_view(), name='pregunta abierta '),
     path('marcas', MarcaApi.as_view(), name='marcas'),
+    path('marcas/<int:marca>', MarcaApi.as_view(), name='marcas'),
     path('ultimo_intento', intentos_max),
     path('pregunta_f_v/<int:marca>', PreguntaFoVGetOne.as_view(), name='preguntasFoV'),
     path('pregunta_f_v', PreguntaFoVView.as_view(), name='preguntasFoV'),
@@ -36,5 +39,7 @@ urlpatterns = [
     path('tipo_actividad', tipo_actividad),
     path('retroalimentacion/<int:id>/', GetRetroalimentacion.as_view()),
     path('retroalimentacion/pregunta/<int:id>/', GetRetroalimentacionPregunta.as_view()),
+    path('calificaciones_reporte', GetReporteCalificaciones.as_view()),
+    path('respuestas', GetResponses.as_view()),
     path('', include(router.urls)),
 ]

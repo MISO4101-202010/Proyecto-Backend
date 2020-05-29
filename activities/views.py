@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateAPIView, DestroyAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,11 +12,12 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from activities.models import Calificacion, Marca, RespuestmultipleEstudiante, Opcionmultiple, PreguntaOpcionMultiple, \
-    PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante
-from activities.serializers import PreguntaOpcionMultipleSerializer, CalificacionSerializer, \
-    RespuestaSeleccionMultipleSerializer, MarcaSerializer, PreguntaFoVSerializer, PausaSerializer, \
-    PreguntaAbiertaSerializer, RespuestaAbiertaSerializer, RespuestaFoVSerializer, \
-    MarcaConTipoActividadSerializer, ActividadPreguntaSerializer, ContenidoInteractivoRetroalimentacionSerializer
+    PreguntaFoV, RespuestaVoF, Pausa, PreguntaAbierta, Actividad, RespuestaAbiertaEstudiante, Respuesta
+from activities.serializers import ActividadPreguntaSerializer, CalificacionSerializer, \
+    ContenidoInteractivoRetroalimentacionSerializer, MarcaConTipoActividadSerializer, MarcaSerializer, PausaSerializer, \
+    PreguntaAbiertaSerializer, PreguntaFoVSerializer, PreguntaOpcionMultipleSerializer, \
+    QualificationFoVResponseSerializer, QualificationMultipleChoiceResponseSerializer, RespuestaAbiertaSerializer, \
+    RespuestaFoVSerializer, RespuestaSeleccionMultipleSerializer
 from interactive_content.models import ContenidoInteractivo, Grupo, Curso
 from interactive_content.permissions import IsProfesor
 from users.models import Profesor, Estudiante
@@ -69,7 +70,8 @@ def reports(request, contentpk):
 
         for pregunta in preguntas_vof:
             if isinstance(pregunta, PreguntaFoV):
-                big_json['marcas'][-1]['preguntas'].append({'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
+                big_json['marcas'][-1]['preguntas'].append(
+                    {'pregunta': pregunta.pregunta, 'esCorrecta': pregunta.esVerdadero,
                      'tipo': 'verdadero/falso', 'total_verdadero': 0, 'total_falso': 0, 'total_respuestas': 0})
                 howManyTrue = RespuestaVoF.objects.filter(
                     preguntaVoF=pregunta, esVerdadero=True).count()  # "howTrue":value
@@ -109,7 +111,7 @@ class MarcaView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
     def put(self, request, *args, **kwargs):
         marca_id = self.request.data.get('marca_id')
-        marca = get_object_or_404(Marca, id =marca_id)
+        marca = get_object_or_404(Marca, id=marca_id)
         marca.nombre = self.request.data.get('nombre')
         marca.punto = self.request.data.get('punto')
         marca.save()
@@ -159,9 +161,10 @@ class CreatePreguntaAbierta(RetrieveUpdateAPIView):
             question = PreguntaAbierta.objects.get(id=abierta_id)
             question.nombre = question_data['nombre']
             question.enunciado = question_data['enunciado']
+            question.retroalimentacion = question_data['retroalimentacion']
+            question.tieneRetroalimentacion = question_data['tieneRetroalimentacion']
             question.save()
         return Response(data=PreguntaAbiertaSerializer(question).data, status=status.HTTP_201_CREATED)
-
 
 
 def index_of(val, in_list):
@@ -208,11 +211,11 @@ class CreatePreguntaSeleccionMultiple(RetrieveUpdateAPIView):
             question.save()
             options = question_data.get('opciones')
             listOption = [o.get('opcion_id') for o in options]
-            #validar eliminados
+            # validar eliminados
             options_ = Opcionmultiple.objects.filter(preguntaSeleccionMultiple_id=seleccion_multiple_id);
             for option in options_:
                 if index_of(option.id, listOption) == -1:
-                 option.delete()
+                    option.delete()
             for option in options:
                 try:
                     option_id = option.get('opcion_id')
@@ -339,6 +342,11 @@ class RespuestaSeleccionMultipleView(ListModelMixin, CreateModelMixin, GenericAP
     # clase serializer para la transformacion de datos del request
     serializer_class = RespuestaSeleccionMultipleSerializer
 
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return QualificationMultipleChoiceResponseSerializer
+        return self.serializer_class
+
     def perform_create(self, serializer):
         return serializer.save()
 
@@ -365,23 +373,21 @@ class RespuestaSeleccionMultipleView(ListModelMixin, CreateModelMixin, GenericAP
                 msj = {'max_attemps': 'Número de intentos maximos excedido'}
                 return Response(msj, status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class CalificarAPI(ListCreateAPIView):
+class CalificarAPI(ListCreateAPIView, DestroyAPIView):
     # Add filter fields for the API
     filterset_fields = ("estudiante", "actividad")
     # serializer usado para la transformacion de datos
     serializer_class = CalificacionSerializer
+    lookup_field = "actividad"
 
     # queryset para retornar las calificaciones de un estudiante
     def get_queryset(self):
         student = self.request.query_params.get('estudiante', None)
         activity = self.request.query_params.get('actividad', None)
+
         if (student):
             return Calificacion.objects.filter(estudiante=student)
         elif (activity):
@@ -415,7 +421,32 @@ class MarcaApi(ListModelMixin, GenericAPIView):
         except Exception as e:
             return JsonResponse({'msj': 'Error procesando el request'}, status=status.HTTP_200_OK)
 
-
+    def delete(self, request, *args, **kwargs):
+        # find all activities by mark
+        marca = get_object_or_404(Marca, id=kwargs['marca'])
+        activities_by_mark = Actividad.objects.filter(marca=marca)
+        if len(activities_by_mark) > 0:
+            # check answers by mark
+            respuestas_abiertas = RespuestaAbiertaEstudiante.objects.filter(
+                preguntaAbierta__marca=marca)
+            respuestas_fov = RespuestaVoF.objects.filter(
+                preguntaVoF__marca=marca)
+            respuestas_seleccion_multiple = RespuestmultipleEstudiante.objects.filter(
+                respuestmultiple__preguntaSeleccionMultiple__marca_id=marca)
+            total_respuestas = len(respuestas_abiertas) + len(respuestas_fov) + len(respuestas_seleccion_multiple)
+            if total_respuestas > 0:
+                return JsonResponse({'msj': 'Hay respuestas asociadas a esa pregunta'},
+                                    status=status.HTTP_406_NOT_ACCEPTABLE)
+            else:
+                for activity in activities_by_mark:
+                    activity.delete()
+                    activity.marca.delete()
+                return JsonResponse({'msj': 'Borrado exitoso '},
+                                    status=status.HTTP_200_OK)
+        else:
+            marca.delete()
+            return JsonResponse({'msj': 'Borrado exitoso'},
+                                status=status.HTTP_200_OK)
 
 def intentos_max(request):
     if request.method == 'GET':
@@ -539,11 +570,10 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
             pregunta1 = PreguntaAbierta.objects.filter(
                 id=self.request.data['preguntaAbierta']
             )
-            print('xxxx', pregunta1)
+
             pregunta = pregunta1[0]
 
-            # pregunta = pregunta1[0].preguntaSeleccionMultiple
-            # valida si el intento de la respuesta es menor o igual al max de intentos permitidos
+
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
                 serializer.is_valid(raise_exception=True)
@@ -564,7 +594,7 @@ class RespuestaAbiertaView(ListModelMixin, CreateModelMixin, GenericAPIView):
 
 class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView):
     queryset = RespuestaVoF.objects.all()
-    # clase serializer para la transformacion de datos del request
+
     serializer_class = RespuestaFoVSerializer
 
     def perform_create(self, serializer):
@@ -584,8 +614,6 @@ class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView)
             )
             pregunta = pregunta1[0]
 
-            # pregunta = pregunta1[0].preguntaSeleccionMultiple
-            # valida si el intento de la respuesta es menor o igual al max de intentos permitidos
             if int(self.request.data['intento']) <= pregunta.numeroDeIntentos:
                 serializer = self.get_serializer(data=request.data)
                 serializer.is_valid(raise_exception=True)
@@ -606,6 +634,11 @@ class RespuestaFoVMultipleView(ListModelMixin, CreateModelMixin, GenericAPIView)
 class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
     serializer_class = RespuestaFoVSerializer
 
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return QualificationFoVResponseSerializer
+        return self.serializer_class
+
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
 
@@ -613,8 +646,6 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
         return self.create(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
-        '''Validar si la información necesaria viene'''
-        # Validar extraer los datos del request
         preguntaVoF_id = self.request.data['preguntaVoF']
         estudiante_id = self.request.data['estudiante']
         respuesta_actual = self.request.data['esVerdadero']
@@ -634,7 +665,7 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                     nueva_respuesta.estudiante = respuesta_previa.estudiante
                     nueva_respuesta.esVerdadero = respuesta_actual
                     nueva_respuesta.save()
-                    return Response(self.serializer_class(nueva_respuesta).data, status=status.HTTP_200_OK)
+                    return Response(self.get_serializer(nueva_respuesta).data, status=status.HTTP_200_OK)
                 else:
                     return Response(data={"Máximo número de intentos alcanzado"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -654,7 +685,7 @@ class RespuestaFoVView(ListModelMixin, CreateModelMixin, GenericAPIView):
                 respuestaFoV.grupo = grupo
                 respuestaFoV.preguntaVoF = pregunta
                 respuestaFoV.save()
-                return Response(self.serializer_class(respuestaFoV).data, status=status.HTTP_200_OK)
+                return Response(self.get_serializer(respuestaFoV).data, status=status.HTTP_200_OK)
         else:
             return Response(data={"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -671,7 +702,7 @@ def dictfetchall(cursor):
     "Return all rows from a cursor as a dict."
     rows = cursor.fetchall()
     result = []
-    keys = ('id','marca_id','tipoActividad','punto','nombre','contenido_id','numIntentos')
+    keys = ('id', 'marca_id', 'tipoActividad', 'punto', 'nombre', 'contenido_id', 'numIntentos')
     for row in rows:
         result.append(dict(zip(keys, row)))
     return result
@@ -682,18 +713,19 @@ class PreguntaVoFModificacionViewSet(GenericViewSet, UpdateModelMixin):
     serializer_class = PreguntaFoVSerializer
     http_method_names = ['patch']
 
+
 class GetRetroalimentacion(ListModelMixin, GenericAPIView):
     serializer_class = ContenidoInteractivoRetroalimentacionSerializer
     lookup_url_kwarg = "id"
 
     def get_queryset(self):
         id = self.kwargs.get(self.lookup_url_kwarg)
-        # interactive_content = ContenidoInteractivo.objects.get(id=id)
 
         return ContenidoInteractivo.objects.filter(id=id)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
+
 
 class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
     serializer_class = ActividadPreguntaSerializer
@@ -701,7 +733,139 @@ class GetRetroalimentacionPregunta(ListModelMixin, GenericAPIView):
 
     def get_queryset(self):
         marca = self.kwargs.get(self.lookup_url_kwarg)
-        return Actividad.objects.filter(id=marca,tieneRetroalimentacion=True)
+        return Actividad.objects.filter(id=marca, tieneRetroalimentacion=True)
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, *kwargs)
+
+
+class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
+
+    def dictRespuestaEst(self, cursor):
+        rows = cursor.fetchall()
+        result = {}
+        values = []
+        for row in rows:
+            values.append(row[1])
+            result[str(row[0])] = values
+        return result
+    def get(self, request, *args, **kwargs):
+
+        student = self.request.query_params.get('estudiante', None)
+        contenidoInt = self.request.query_params.get('contenidoInt', None)
+
+        if (contenidoInt and student):
+
+            listaCalifaciones = []
+            respuestasCorrectas = 0
+            respuestasIncorrectas = 0
+            sumCalificaciones = 0
+            marcas = Marca.objects.filter(contenido=contenidoInt)
+
+            cursor = db.connection.cursor()
+
+            for marca in marcas:
+
+                actividad = Actividad.objects.filter(marca=getattr(marca, "id"))
+                calificacion = Calificacion.objects.filter(actividad=getattr(actividad[0], "id"), estudiante=student)
+
+                with open('activities/raw_queries/getRespuestasEstudiante.sql', 'r') as file:
+                    query = file.read().replace('\n', ' ').replace('\t', ' ')
+                    cursor.execute(query, (contenidoInt, student, getattr(marca, "id"),
+                                           contenidoInt, student, getattr(marca, "id"),
+                                           getattr(marca, "id"), contenidoInt, student, getattr(marca, "id")))
+                respuestas = self.dictRespuestaEst(cursor)
+
+                if calificacion.count() != 0:
+                    calificacionVal = getattr(calificacion[0], "calificacion")
+                    sumCalificaciones += calificacionVal
+                    if calificacionVal == 0:
+                        respuestasIncorrectas += 1
+                    else:
+                        respuestasCorrectas += 1
+                else:
+                    calificacionVal = "Pendiente por calificar"
+                if str(getattr(marca, "id")) in respuestas:
+                    calificacionDict = {"nombrePregunta": str(getattr(actividad[0], "nombre")),
+                                        "respuestasPregunta": respuestas[str(getattr(marca, "id"))],
+                                        "calificacion": str(calificacionVal)}
+
+                    listaCalifaciones.append(calificacionDict)
+
+            notaTotal = sumCalificaciones / len(marcas)
+            reporteCalificaciones = {"respuestasCorrectas": respuestasCorrectas,
+                                     "respuestasIncorrectas": respuestasIncorrectas,
+                                     "calificacionTotal": notaTotal,
+                                     "calificaciones": listaCalifaciones}
+
+            return JsonResponse(reporteCalificaciones, status=status.HTTP_200_OK)
+        else:
+            return Response({"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetResponses(ListModelMixin, GenericAPIView):
+
+    def dictRespuestaEst(self, cursor):
+        rows = [x for x in cursor]
+        cols = [x[0] for x in cursor.description]
+        respuestas = []
+        for row in rows:
+            respuesta = {}
+            for prop, val in zip(cols, row):
+                respuesta[prop] = val
+            respuestas.append(respuesta)
+        # Create a string representation of your array of songs.
+        return respuestas
+
+    def get(self, request, *args, **kwargs):
+
+        student = self.request.query_params.get('estudiante', None)
+        contenidoInt = self.request.query_params.get('contenidoInt', None)
+
+        if contenidoInt and student:
+
+            respuestas = []
+            preguntasCalificadas = 0
+            sumCalificaciones = 0
+            notaTotal = 0
+            marcas = Marca.objects.filter(contenido=contenidoInt)
+            try:
+                cursor = db.connection.cursor()
+                for marca in marcas:
+                    with open('activities/raw_queries/getResponses.sql', 'r') as file:
+                        query = file.read().replace('\n', ' ').replace('\t', ' ')
+                        cursor.execute(query, (contenidoInt, student, getattr(marca, "id"),
+                                               contenidoInt, student, getattr(marca, "id"),
+                                               contenidoInt, student, getattr(marca, "id")))
+                    if cursor.rowcount > 0:
+                        respuestas = self.dictRespuestaEst(cursor)
+                        preguntasCalificadas += 1
+                        if len(respuestas) > 1:
+                            intento = respuestas[0]['intento']
+                            for respuesta in respuestas:
+                                if respuesta['intento'] == intento:
+                                    if respuesta['calificacion'] is not None:
+                                        sumCalificaciones += respuesta['calificacion']
+                                    else:
+                                        preguntasCalificadas += -1
+                        elif len(respuestas) == 1:
+                            if respuestas[0]['calificacion'] is not None:
+                                sumCalificaciones += respuestas[0]['calificacion']
+                            else:
+                                preguntasCalificadas += -1
+            except:
+                return Response({"Error al calcular la nota"}, status=status.HTTP_400_BAD_REQUEST)
+            finally:
+                cursor.close()
+            if len(marcas) > 0:
+                notaTotal = sumCalificaciones / len(marcas)
+            if notaTotal < 0:
+                notaTotal = 0
+            reporteCalificaciones = {"preguntasCalificadas": preguntasCalificadas,
+                                     "totalPreguntas": len(marcas),
+                                     "calificacionTotal": notaTotal,
+                                     "respuestas": respuestas}
+
+            return JsonResponse(reporteCalificaciones, status=status.HTTP_200_OK)
+        else:
+            return Response({"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
