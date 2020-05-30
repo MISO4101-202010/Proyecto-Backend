@@ -1134,7 +1134,6 @@ class CalificacionPorContenidoInteractivo(TestCase):
                          {"estudiante": self.estudiante.pk, "actividad": self.preguntaOpcionMultiple.pk,
                           "calificacion": "3.65"})
         response = self.client.get(self.url, format='json')
-        print(json.loads(response.content))
         current_data = json.loads(response.content)['calificaciones'][0]
         self.assertEqual(current_data['nombrePregunta'], 'Pregunta Opcion')
         self.assertEqual(current_data['calificacion'], '3.65')
