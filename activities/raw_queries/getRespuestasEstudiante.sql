@@ -2,7 +2,7 @@ select
     marca.id,
 	CAST(Case
             When rfov."esVerdadero"=true Then 'Verdadero'
-            ELse 'Falso' END
+            ELSE 'Falso' END
         AS VARCHAR) as respuesta
 from
 	activities_actividad actividad
