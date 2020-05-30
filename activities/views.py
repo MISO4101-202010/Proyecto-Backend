@@ -795,7 +795,7 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
             notaTotal = sumCalificaciones / len(marcas)
             reporteCalificaciones = {"respuestasCorrectas": respuestasCorrectas,
                                      "respuestasIncorrectas": respuestasIncorrectas,
-                                     "calificacionTotal": round(notaTotal,2),
+                                     "calificacionTotal": str(round(notaTotal,2)),
                                      "calificaciones": listaCalifaciones}
             cursor.close()
             #Se retorna la respuesta
