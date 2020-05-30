@@ -797,7 +797,8 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
                                      "respuestasIncorrectas": respuestasIncorrectas,
                                      "calificacionTotal": notaTotal,
                                      "calificaciones": listaCalifaciones}
-
+            cursor.close()
+            #Se retorna la respuesta
             return JsonResponse(reporteCalificaciones, status=status.HTTP_200_OK)
         else:
             return Response({"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
