@@ -36,7 +36,7 @@ select
     marca.id id_marca,
 	marca.nombre,
 	om.opcion as respuesta,
-	case when rca.calificacion is not null then rca.calificacion else ((case When om."esCorrecta"=true then 5 else -5 end)::NUMERIC /(select (count(*))::NUMERIC from activities_opcionmultiple where "preguntaSeleccionMultiple_id"=om."preguntaSeleccionMultiple_id")) end calificacion,
+	case when rca.calificacion is not null then rca.calificacion else ((case When om."esCorrecta"=true then 5 else -5 end)::NUMERIC /case When om."esCorrecta"=true then (select (count(*))::NUMERIC from activities_opcionmultiple where "preguntaSeleccionMultiple_id"=om."preguntaSeleccionMultiple_id" and "esCorrecta"=true) else (select (count(*))::NUMERIC from activities_opcionmultiple where "preguntaSeleccionMultiple_id"=om."preguntaSeleccionMultiple_id") end) end calificacion,
 	resp.intento
 	from
 	activities_actividad actividad

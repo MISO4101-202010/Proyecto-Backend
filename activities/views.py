@@ -1,3 +1,5 @@
+import traceback
+
 from django import db
 from django.http import HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -795,7 +797,7 @@ class GetReporteCalificaciones(ListModelMixin, GenericAPIView):
             notaTotal = sumCalificaciones / len(marcas)
             reporteCalificaciones = {"respuestasCorrectas": respuestasCorrectas,
                                      "respuestasIncorrectas": respuestasIncorrectas,
-                                     "calificacionTotal": notaTotal,
+                                     "calificacionTotal": str(round(notaTotal,2)),
                                      "calificaciones": listaCalifaciones}
             cursor.close()
             #Se retorna la respuesta
@@ -826,13 +828,18 @@ class GetResponses(ListModelMixin, GenericAPIView):
         if contenidoInt and student:
 
             respuestas = []
+            totalRespuestas = []
             preguntasCalificadas = 0
             sumCalificaciones = 0
             notaTotal = 0
+            preguntasTipoPausa = 0
             marcas = Marca.objects.filter(contenido=contenidoInt)
             try:
                 cursor = db.connection.cursor()
                 for marca in marcas:
+                    pausa = Pausa.objects.filter(marca=getattr(marca, "id"))
+                    if len(pausa) > 0:
+                        preguntasTipoPausa += 1
                     with open('activities/raw_queries/getResponses.sql', 'r') as file:
                         query = file.read().replace('\n', ' ').replace('\t', ' ')
                         cursor.execute(query, (contenidoInt, student, getattr(marca, "id"),
@@ -840,6 +847,7 @@ class GetResponses(ListModelMixin, GenericAPIView):
                                                contenidoInt, student, getattr(marca, "id")))
                     if cursor.rowcount > 0:
                         respuestas = self.dictRespuestaEst(cursor)
+                        totalRespuestas += respuestas
                         preguntasCalificadas += 1
                         if len(respuestas) > 1:
                             intento = respuestas[0]['intento']
@@ -855,17 +863,19 @@ class GetResponses(ListModelMixin, GenericAPIView):
                             else:
                                 preguntasCalificadas += -1
             except:
+                print("Unexpected error:", traceback.print_exc())
                 return Response({"Error al calcular la nota"}, status=status.HTTP_400_BAD_REQUEST)
             finally:
                 cursor.close()
-            if len(marcas) > 0:
-                notaTotal = sumCalificaciones / len(marcas)
+
+            if len(marcas) > 0 and len(marcas) != preguntasTipoPausa:
+                notaTotal = sumCalificaciones / (len(marcas) - preguntasTipoPausa)
             if notaTotal < 0:
                 notaTotal = 0
             reporteCalificaciones = {"preguntasCalificadas": preguntasCalificadas,
                                      "totalPreguntas": len(marcas),
                                      "calificacionTotal": notaTotal,
-                                     "respuestas": respuestas}
+                                     "respuestas": totalRespuestas}
 
             return JsonResponse(reporteCalificaciones, status=status.HTTP_200_OK)
         else:

@@ -1053,10 +1053,10 @@ class CalificacionPorContenidoInteractivo(TestCase):
 
     def create_QandA_PreguntaOpcionMultiple(self):
         self.create_course()
-        self.marca = Marca.objects.create(nombre="Nueva Marca Pregunta Opcion Multiple",
+        self.marca = Marca.objects.create(nombre="Pregunta Opcion",
                                           contenido=self.contenido_interactivo)
         self.preguntaOpcionMultiple = PreguntaOpcionMultiple()
-        self.preguntaOpcionMultiple.nombre = "Pregunta Opcion Multiple"
+        self.preguntaOpcionMultiple.nombre = "Pregunta Opcion"
         self.preguntaOpcionMultiple.enunciado = "enunciado"
         self.preguntaOpcionMultiple.numeroDeIntentos = 1
         self.preguntaOpcionMultiple.tieneRetroalimentacion = True
@@ -1134,8 +1134,6 @@ class CalificacionPorContenidoInteractivo(TestCase):
                          {"estudiante": self.estudiante.pk, "actividad": self.preguntaOpcionMultiple.pk,
                           "calificacion": "3.65"})
         response = self.client.get(self.url, format='json')
-        print(json.loads(response.content))
         current_data = json.loads(response.content)['calificaciones'][0]
-        self.assertEqual(current_data['nombrePregunta'], 'Pregunta Opcion Multiple')
-        self.assertEqual(current_data['respuestasPregunta'], ['Esta es la opcion1', 'Esta es la opcion2'])
+        self.assertEqual(current_data['nombrePregunta'], 'Pregunta Opcion')
         self.assertEqual(current_data['calificacion'], '3.65')
