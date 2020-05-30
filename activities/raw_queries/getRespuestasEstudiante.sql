@@ -1,7 +1,7 @@
 select
     marca.id,
 	CAST(Case
-            When rfov."esVerdadero"=1 Then 'Verdadero'
+            When rfov."esVerdadero"= True Then 'Verdadero'
             ELse 'Falso' END
         AS VARCHAR) as respuesta
 from
@@ -14,8 +14,8 @@ where rfov.respuesta_ptr_id =
 	from
 		activities_actividad actividad
 		inner join activities_marca marca on marca.id = actividad.marca_id
+		inner join activities_respuestavof rfov on actividad.id = rfov."preguntaVoF_id"
 		inner join activities_respuesta resp on resp.id = rfov.respuesta_ptr_id
-		left join activities_respuestavof rfov on actividad.id = rfov."preguntaVoF_id"
 	where
 		marca.contenido_id = %s and resp.estudiante_id = %s and marca.id = %s
 	order by resp.fecha_creacion desc
@@ -34,8 +34,8 @@ where rpa.respuesta_ptr_id =
 	from
 		activities_actividad actividad
 		inner join activities_marca marca on marca.id = actividad.marca_id
-		inner join activities_respuesta resp on resp.id = rpa.respuesta_ptr_id
-		left join activities_respuestaabiertaestudiante rpa on actividad.id = rpa."preguntaAbierta_id"
+		inner join activities_respuestaabiertaestudiante rpa on actividad.id = rpa."preguntaAbierta_id"
+		inner join activities_respuesta resp on resp.id = rpa.respuesta_ptr_id	
 	where
 		marca.contenido_id = %s and resp.estudiante_id = %s and marca.id = %s
 	order by resp.fecha_creacion desc
