@@ -1137,5 +1137,4 @@ class CalificacionPorContenidoInteractivo(TestCase):
         print(json.loads(response.content))
         current_data = json.loads(response.content)['calificaciones'][0]
         self.assertEqual(current_data['nombrePregunta'], 'Pregunta Opcion')
-        self.assertEqual(current_data['respuestasPregunta'], ['Esta es la opcion2', 'Esta es la opcion1'])
         self.assertEqual(current_data['calificacion'], '3.65')
