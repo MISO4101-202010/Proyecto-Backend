@@ -1,7 +1,7 @@
 select
     marca.id,
 	CAST(Case
-            When rfov.esVerdadero=1 Then 'Verdadero'
+            When rfov."esVerdadero"=1 Then 'Verdadero'
             ELse 'Falso' END
         AS VARCHAR) as respuesta
 from
