@@ -9,11 +9,11 @@ from rest_framework.test import APIClient
 
 from interactive_content.models import ContenidoInteractivo, Contenido, Curso, Grupo
 from activities.models import Marca, PreguntaOpcionMultiple, Opcionmultiple, Calificacion, Pausa, \
-    PreguntaAbierta, PreguntaFoV
+    PreguntaAbierta, PreguntaFoV, RespuestaVoF, PreguntaAbierta, PreguntaFoV, Respuesta, RespuestaAbiertaEstudiante, \
+    RespuestaVoF, RespuestmultipleEstudiante, Actividad
 
 from users.models import Profesor, Estudiante
 from rest_framework.authtoken.models import Token
-
 
 class AddOpenQuestionTestCase(TestCase):
 
@@ -404,18 +404,19 @@ class RespuestaPreguntaAbiertaTestCase(TestCase):
 
         url = "/activities/respuestaAbierta/"
 
-        response = self.client.post(url, {"preguntaAbierta": pregunta.id,
-                                          "fecha_creacion": "2019-10-25 23:21:51.950232",
-                                          "estudiante": estudiante.pk,
-                                          "intento": 1,
-                                          "grupo": grupo.id,
-                                          "respuesta": "respuesta",
-                                          "retroalimentacion": "retroalimentacion"
-
-                                          }
-                                    )
+        response = self.client.post(url,
+                                    {
+                                        "preguntaAbierta": pregunta.id,
+                                        "fecha_creacion": "2019-10-25 23:21:51.950232",
+                                        "estudiante": estudiante.pk,
+                                        "intento": 1,
+                                        "grupo": grupo.id,
+                                        "respuesta": "respuesta estudiante",
+                                        "retroalimentacion": "retroalimentacion"
+                                    })
 
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(json.loads(response.content)['respuesta'], "respuesta estudiante")
 
 
 class RespuestaPreguntaFoV(TestCase):
@@ -441,15 +442,15 @@ class RespuestaPreguntaFoV(TestCase):
 
         url = "/activities/respuestafov/"
 
-        response = self.client.post(url, {"preguntaVoF": pregunta.id,
-                                          "fecha_creacion": "2019-10-25 23:21:51.950232",
-                                          "estudiante": estudiante.pk,
-                                          "intento": 1,
-                                          "grupo": grupo.id,
-                                          "esVerdadero": True
-
-                                          }
-                                    )
+        response = self.client.post(url,
+                                    {
+                                        "preguntaVoF": pregunta.id,
+                                        "fecha_creacion": "2019-10-25 23:21:51.950232",
+                                        "estudiante": estudiante.pk,
+                                        "intento": 1,
+                                        "grupo": grupo.id,
+                                        "esVerdadero": True
+                                    })
 
         self.assertEqual(response.status_code, 200)
 
@@ -615,14 +616,14 @@ class RespuestaSeleccionTestCase(TestCase):
         grupo.save()
         url = "/activities/respuestaOpcionMultiple/"
 
-        response = self.client.post(url, {"respuestmultiple": opcion.id,
-                                          "fecha_creacion": "2019-10-25 23:21:51.950232",
-                                          "estudiante": estudiante.pk,
-                                          "intento": 1,
-                                          "curso": grupo.id
-
-                                          }
-                                    )
+        response = self.client.post(url,
+                                    {
+                                        "respuestmultiple": opcion.id,
+                                        "fecha_creacion": "2019-10-25 23:21:51.950232",
+                                        "estudiante": estudiante.pk,
+                                        "intento": 1,
+                                        "curso": grupo.id
+                                    })
 
         self.assertEqual(response.status_code, 201)
 
@@ -644,7 +645,7 @@ class RespuestaSeleccionTestCase(TestCase):
                                           }
                                     )
 
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 400)
 
 
 class CalificacionCase(TestCase):
@@ -828,51 +829,146 @@ class MarcaTestCases (TestCase):
         response = self.client.put(url, new_marca, content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-#Prueba de retorno de retroalimentaacion
-class TestPreguntaRetroalimentacionTestCase(TestCase):
+    def test_delete_marca_with_no_answers(self):
+        url = '/activities/marcas/{}'
 
-    def test_create_question_true(self):
+        profesor = Profesor()
+        profesor.email = 'mail@mail.com'
+        profesor.username = 'profesor'
+        profesor.password = 'password'
+        profesor.save()
+
+        contenido = Contenido()
+        contenido.nombre = 'Contenido Profesor1'
+        contenido.profesor = profesor
+        contenido.url = url
+        contenido.save()
+
+        curso = Curso()
+        curso.nombre = 'curso1'
+        curso.profesor = profesor
+        curso.descripcion = 'Curso 1'
+        curso.save()
+
+        contenido_interactivo = ContenidoInteractivo()
+        contenido_interactivo.nombre = 'Cont Interactivo 1'
+        contenido_interactivo.contenido = contenido
+        contenido_interactivo.save()
+        contenido_interactivo.curso.add(curso)
+
+        marca = Marca()
+        marca.contenido = contenido_interactivo
+        marca.nombre = 'marca1'
+        marca.punto = 30
+        marca.save()
+
+        preguntafov = PreguntaFoV()
+        preguntafov.marca = marca
+        preguntafov.nombre = 'pregutna fov'
+        preguntafov.esVerdadero = True
+        preguntafov.numeroDeIntentos = 5
+        preguntafov.retroalimentacion = False
+        preguntafov.save()
+
+        response = self.client.delete(url.format(marca.id), content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(0, Marca.objects.filter(id=marca.id).count())
+        self.assertEqual(0, Actividad.objects.filter(marca=marca.id).count())
+
+    def test_delete_marca_with_answers(self):
+        url = '/activities/marcas/{}'
+
+        profesor = Profesor()
+        profesor.email = 'mail@mail.com'
+        profesor.username = 'profesor'
+        profesor.password = 'password'
+        profesor.save()
+
+        contenido = Contenido()
+        contenido.nombre = 'Contenido Profesor1'
+        contenido.profesor = profesor
+        contenido.url = url
+        contenido.save()
+
+        curso = Curso()
+        curso.nombre = 'curso1'
+        curso.profesor = profesor
+        curso.descripcion = 'Curso 1'
+        curso.save()
+
+        contenido_interactivo = ContenidoInteractivo()
+        contenido_interactivo.nombre = 'Cont Interactivo 1'
+        contenido_interactivo.contenido = contenido
+        contenido_interactivo.save()
+        contenido_interactivo.curso.add(curso)
+
+        marca = Marca()
+        marca.contenido = contenido_interactivo
+        marca.nombre = 'marca1'
+        marca.punto = 30
+        marca.save()
+
+        preguntafov = PreguntaFoV()
+        preguntafov.marca = marca
+        preguntafov.nombre = 'pregutna fov'
+        preguntafov.esVerdadero = True
+        preguntafov.numeroDeIntentos = 5
+        preguntafov.retroalimentacion = False
+        preguntafov.save()
+
+        estudiante = Estudiante()
+        estudiante.username = 'estudiante1'
+        estudiante.password = 'password'
+        estudiante.email = 'mail@mail.com'
+        estudiante.save()
+
+        respuesta_pregunta_fov = RespuestaVoF()
+        respuesta_pregunta_fov.esVerdadero = False
+        respuesta_pregunta_fov.estudiante = estudiante
+        respuesta_pregunta_fov.grupo = None
+        respuesta_pregunta_fov.intento = 1
+        respuesta_pregunta_fov.preguntaVoF=preguntafov
+        respuesta_pregunta_fov.save()
+
+        response = self.client.delete(url.format(marca.id), content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_406_NOT_ACCEPTABLE)
+        self.assertEqual(1, Marca.objects.filter(id=marca.id).count())
+        self.assertEqual(1, Actividad.objects.filter(marca=marca.id).count())
+
+
+
+
+class PreguntaRetroalimentacionTestCase(TestCase):
+
+    def setUp(self):
         self.client = APIClient()
-        marca = escenario()
-        url = "/activities/pregunta_f_v"
-        pregunta = {
-            "nombre": "test",
+        self.url= "/activities/pregunta_f_v"
+        self.marca = escenario()
+        self.pregunta = {
+            "nombre": "Test1",
             "numeroDeIntentos": "1",
             "tieneRetroalimentacion": True,
             "retroalimentacion": "Si",
             "pregunta": "¿PHP es más rapido procesando operaciones matematicas que Python?",
             "esVerdadero": True,
-            "marca": marca.pk
+            "marca": self.marca.pk
         }
-        response = self.client.post(url, data=pregunta, format='json')
+
+    def test_create_question_true(self):
+        response = self.client.post(self.url, data=self.pregunta, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'],True)
-        #Retorna la retroalimentación
 
         url = "/activities/retroalimentacion/pregunta/" + str(json.loads(response.content)['id']) + "/"
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content)['count'], 1)
 
-
-
     def test_create_question_false(self):
-        self.client = APIClient()
-        marca = escenario()
-        url = "/activities/pregunta_f_v"
-        pregunta = {
-            "nombre": "test",
-            "numeroDeIntentos": "1",
-            "tieneRetroalimentacion": False,
-            "retroalimentacion": "Al parecer, no",
-            "pregunta": "¿Es el mundo una simulación?",
-            "esVerdadero": False,
-            "marca": marca.pk
-        }
-        response = self.client.post(url, data=pregunta, format='json')
+        self.pregunta["tieneRetroalimentacion"] = False
+        response = self.client.post(self.url, data=self.pregunta, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(json.loads(response.content)['tieneRetroalimentacion'],False)
-        #Retorna la retroalimentación
 
         url = "/activities/retroalimentacion/pregunta/" + str(json.loads(response.content)['id']) + "/"
         response = self.client.get(url, format='json')
@@ -880,32 +976,164 @@ class TestPreguntaRetroalimentacionTestCase(TestCase):
         self.assertEqual(json.loads(response.content)['count'], 0)
 
     def test_list_on_contenido(self):
-        self.client = APIClient()
-        marca = escenario()
-        url = "/activities/pregunta_f_v"
-        pregunta = {
-            "nombre": "test1",
-            "numeroDeIntentos": "1",
-            "tieneRetroalimentacion": True,
-            "retroalimentacion": "Si, con el módulo threading",
-            "pregunta": "¿Python puede usaar hilos?",
-            "esVerdadero": True,
-            "marca": marca.pk
-        }
-        response = self.client.post(url, data=pregunta, format='json')
-        url = "/activities/pregunta_f_v"
-        pregunta = {
-            "nombre": "test2",
-            "numeroDeIntentos": "1",
-            "tieneRetroalimentacion": False,
-            "retroalimentacion": "Si, con propósito general",
-            "pregunta": "¿Python es scripting?",
-            "esVerdadero": True,
-            "marca": marca.pk
-        }
-        response = self.client.post(url, data=pregunta, format='json')
-        #Retorna la retroalimentación
-        url = "/activities/retroalimentacion/" + str(marca.contenido.pk) + "/"
+        response = self.client.post(self.url, data=self.pregunta, format='json')
+        self.pregunta["nombre"] = "Test2"
+        self.pregunta["tieneRetroalimentacion"] = False
+        response = self.client.post(self.url, data=self.pregunta, format='json')
+
+        url = "/activities/retroalimentacion/" + str(self.marca.contenido.pk) + "/"
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(json.loads(response.content)['results'][0]['marcas'][0]['actividades']), 2)
+
+
+class CalificacionPorContenidoInteractivo(TestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.profesor = Profesor.objects.create_superuser('admin', 'admin@admin.com', 'admin123')
+        self.token_profesor = Token.objects.create(user=self.profesor)
+
+    def create_student(self):
+        estudiante = Estudiante.objects.create_user('estudiante', 'estudiante@admin.com', 'estudiante123',
+                                                    codigo_de_estudiante='estudiante123')
+        self.token_estudiante = Token.objects.create(user=estudiante)
+        return estudiante
+
+    def create_course(self):
+        self.estudiante = self.create_student()
+        self.curso = Curso.objects.create(profesor=self.profesor, nombre='MISO4201', descripcion='curso prueba')
+        self.grupo = Grupo.objects.create(curso=self.curso, estudiante=self.estudiante)
+        contenido = Contenido.objects.create(url="test.com", nombre="contenido test", profesor_id=self.profesor.id)
+        self.contenido_interactivo = ContenidoInteractivo.objects.create(nombre='test', contenido=contenido)
+        self.contenido_interactivo.curso.add(self.curso)
+        self.url = '/activities/calificaciones_reporte?estudiante=' + str(self.estudiante.pk) + '&contenidoInt=' + str(
+            self.contenido_interactivo.id)
+
+    def create_QandA_PreguntaAbierta(self):
+        self.create_course()
+        self.marca = Marca.objects.create(nombre="Nueva Marca Pregunta Abierta", contenido=self.contenido_interactivo)
+        self.preguntaAbierta = PreguntaAbierta()
+        self.preguntaAbierta.nombre = "Pregunta Abierta"
+        self.preguntaAbierta.numeroDeIntentos = 1
+        self.preguntaAbierta.tieneRetroalimentacion = True
+        self.preguntaAbierta.marca_id = self.marca.id
+        self.preguntaAbierta.enunciado = "Enunciado"
+        self.preguntaAbierta.save()
+        self.respuestaAbierta = RespuestaAbiertaEstudiante()
+        self.respuestaAbierta.estudiante = self.estudiante
+        self.respuestaAbierta.preguntaAbierta = self.preguntaAbierta
+        self.respuestaAbierta.fecha_creacion = "2019-10-25 23:21:51.950232"
+        self.respuestaAbierta.grupo = self.grupo
+        self.respuestaAbierta.intento = 1
+        self.respuestaAbierta.respuesta = "Esta es la respuesta"
+        self.respuestaAbierta.retroalimentacion = "Esta es la retroalimentacion"
+        self.respuestaAbierta.save()
+
+    def create_QandA_PreguntaVoF(self):
+        self.create_course()
+        self.marca = Marca.objects.create(nombre="Nueva Marca Pregunta Vof", contenido=self.contenido_interactivo)
+        self.preguntaVoF = PreguntaFoV()
+        self.preguntaVoF.nombre = "Pregunta VoF"
+        self.preguntaVoF.numeroDeIntentos = 1
+        self.preguntaVoF.tieneRetroalimentacion = True
+        self.preguntaVoF.marca_id = self.marca.id
+        self.preguntaVoF.pregunta = "¿PHP es más rapido procesando operaciones matematicas que Python?"
+        self.preguntaVoF.esVerdadero = True
+        self.preguntaVoF.save()
+        self.respuestaVoF = RespuestaVoF()
+        self.respuestaVoF.estudiante = self.estudiante
+        self.respuestaVoF.preguntaVoF = self.preguntaVoF
+        self.respuestaVoF.fecha_creacion = "2019-10-25 23:21:51.950232"
+        self.respuestaVoF.grupo = self.grupo
+        self.respuestaVoF.intento = 1
+        self.respuestaVoF.esVerdadero = False
+        self.respuestaVoF.retroalimentacion = "Esta es la retroalimentacion"
+        self.respuestaVoF.save()
+
+    def create_QandA_PreguntaOpcionMultiple(self):
+        self.create_course()
+        self.marca = Marca.objects.create(nombre="Pregunta Opcion",
+                                          contenido=self.contenido_interactivo)
+        self.preguntaOpcionMultiple = PreguntaOpcionMultiple()
+        self.preguntaOpcionMultiple.nombre = "Pregunta Opcion"
+        self.preguntaOpcionMultiple.enunciado = "enunciado"
+        self.preguntaOpcionMultiple.numeroDeIntentos = 1
+        self.preguntaOpcionMultiple.tieneRetroalimentacion = True
+        self.preguntaOpcionMultiple.esMultipleResp = True
+        self.preguntaOpcionMultiple.marca_id = self.marca.id
+        self.preguntaOpcionMultiple.save()
+        self.opcion1 = Opcionmultiple(opcion="Esta es la opcion1",
+                                 esCorrecta=True,
+                                 preguntaSeleccionMultiple=self.preguntaOpcionMultiple)
+
+        self.opcion1.save()
+        self.opcion2 = Opcionmultiple(opcion="Esta es la opcion2",
+                                 esCorrecta=False,
+                                 preguntaSeleccionMultiple=self.preguntaOpcionMultiple)
+
+        self.opcion2.save()
+        self.opcion3 = Opcionmultiple(opcion="Esta es la opcion3",
+                                 esCorrecta=True,
+                                 preguntaSeleccionMultiple=self.preguntaOpcionMultiple)
+        self.opcion3.save()
+        self.opcion4 = Opcionmultiple(opcion="Esta es la opcion4",
+                                 esCorrecta=False,
+                                 preguntaSeleccionMultiple=self.preguntaOpcionMultiple)
+        self.opcion4.save()
+        self.respuestaOpcionMultiple1 = RespuestmultipleEstudiante()
+        self.respuestaOpcionMultiple1.estudiante = self.estudiante
+        self.respuestaOpcionMultiple1.respuestmultiple = self.opcion1
+        self.respuestaOpcionMultiple1.fecha_creacion = "2019-10-25 23:21:51.950232"
+        self.respuestaOpcionMultiple1.grupo = self.grupo
+        self.respuestaOpcionMultiple1.intento = 1
+        self.respuestaOpcionMultiple1.esVerdadero = False
+        self.respuestaOpcionMultiple1.retroalimentacion = "Esta es la retroalimentacion"
+        self.respuestaOpcionMultiple1.save()
+        self.respuestaOpcionMultiple2 = RespuestmultipleEstudiante()
+        self.respuestaOpcionMultiple2.estudiante = self.estudiante
+        self.respuestaOpcionMultiple2.respuestmultiple = self.opcion2
+        self.respuestaOpcionMultiple2.fecha_creacion = "2019-10-25 23:21:51.977777"
+        self.respuestaOpcionMultiple2.grupo = self.grupo
+        self.respuestaOpcionMultiple2.intento = 1
+        self.respuestaOpcionMultiple2.esVerdadero = False
+        self.respuestaOpcionMultiple2.retroalimentacion = "Esta es la retroalimentacion"
+        self.respuestaOpcionMultiple2.save()
+
+    def test_get_pending_note(self):
+        self.create_QandA_PreguntaAbierta()
+        response = self.client.get(self.url, format='json')
+        current_data = json.loads(response.content)['calificaciones'][0]
+        self.assertEqual(current_data['calificacion'], 'Pendiente por calificar')
+
+    def test_get_note_PreguntaAbierta(self):
+        self.create_QandA_PreguntaAbierta()
+        self.client.post('/activities/calificacion',
+                         {"estudiante": self.estudiante.pk, "actividad": self.preguntaAbierta.pk,
+                          "calificacion": "3.75"})
+        response = self.client.get(self.url, format='json')
+        current_data = json.loads(response.content)['calificaciones'][0]
+        self.assertEqual(current_data['nombrePregunta'], 'Pregunta Abierta')
+        self.assertEqual(current_data['respuestasPregunta'], ['Esta es la respuesta'])
+        self.assertEqual(current_data['calificacion'], '3.75')
+
+    def test_get_note_PreguntaVoF(self):
+        self.create_QandA_PreguntaVoF()
+        self.client.post('/activities/calificacion',
+                         {"estudiante": self.estudiante.pk, "actividad": self.preguntaVoF.pk,
+                          "calificacion": "3.85"})
+        response = self.client.get(self.url, format='json')
+        current_data = json.loads(response.content)['calificaciones'][0]
+        self.assertEqual(current_data['nombrePregunta'], 'Pregunta VoF')
+        self.assertEqual(current_data['respuestasPregunta'], ['Falso'])
+        self.assertEqual(current_data['calificacion'], '3.85')
+
+    def test_get_note_PreguntaOpcionMultiple(self):
+        self.create_QandA_PreguntaOpcionMultiple()
+        self.client.post('/activities/calificacion',
+                         {"estudiante": self.estudiante.pk, "actividad": self.preguntaOpcionMultiple.pk,
+                          "calificacion": "3.65"})
+        response = self.client.get(self.url, format='json')
+        current_data = json.loads(response.content)['calificaciones'][0]
+        self.assertEqual(current_data['nombrePregunta'], 'Pregunta Opcion')
+        self.assertEqual(current_data['calificacion'], '3.65')

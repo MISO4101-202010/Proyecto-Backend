@@ -9,6 +9,7 @@ from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
+from rest_framework.test import APIClient
 from rest_framework.utils import json
 from rest_framework.views import APIView
 
@@ -279,3 +280,31 @@ class GetCourseView(APIView):
         cursos = Curso.objects.filter(profesor=request.user)
         serializer = CursoDetailsSerializer(cursos, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class GetQualificationByCourse(ListModelMixin, GenericAPIView):
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+
+
+    def get(self, request, *args, **kwargs):
+        student = self.request.query_params.get('estudiante', None)
+        cursoId = self.request.query_params.get('curso', None)
+        data = []
+        if cursoId and student:
+            self.client = APIClient()
+            for content in ContenidoInteractivo.objects.filter(curso=cursoId):
+                url = "/activities/respuestas?estudiante=" + str(student) + "&contenidoInt=" + str(
+                    content.id)
+                response = self.client.get(url)
+                if response.status_code == 200:
+                    data2 = response.json()
+                    data2['contenidoInt'] = content.id
+                    data2['contenidoNombre'] = content.nombre
+                    data.append(data2)
+                else:
+                    return Response(response.json(), status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"Campos obligatorios no incluidos"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return JsonResponse(data, safe=False)
